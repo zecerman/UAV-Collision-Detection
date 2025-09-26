@@ -1,0 +1,15 @@
+name: Capstone
+channels:
+  - defaults
+dependencies:
+  # Python version Unity officially supports for ML-Agents
+  - python=3.10.12
+  
+  - pip
+  - pip:
+      - mlagents==1.1.0
+      - torch==2.2.2        
+      - protobuf==3.20.3    
+      - cattrs==1.6.0       
+      - tensorboard
+      - numpy

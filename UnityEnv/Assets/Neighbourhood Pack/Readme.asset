@@ -1,0 +1,55 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fcf7219bab7fe46a1ad266029b2fee19, type: 3}
+  m_Name: Readme
+  m_EditorClassIdentifier: 
+  icon: {fileID: 2800000, guid: 407619c5c19a54982b3880b5a085c597, type: 3}
+  iconMaxWidth: 192
+  title: Neighbourhood Pack
+  sections:
+  - heading: About
+    text: Thank you for purchasing the Neighbourhood Asset Pack. These lowpoly
+      stylized characters and props are ideal to build your game or prototype.
+    linkText: 
+    url: 
+  - heading: Optimization
+    text: "These characters and props are extremely light and can be used in both pc and mobile
+      games. All models share a single texture file, allowing you to customize the colors
+      according to your needs just by duplicanting materials and adjusting the material offset. \n\n*Some models have two material slots, check the <Materials> option in the [ Inspector > Skinned Mesh Renderer ] to add secondary materials and customize colors to fit your needs."
+    linkText: 
+    url: 
+  - heading: PolyCount
+    text: "Character:\nBody | 792 Tris\nDress | 100 Tris\nHair Boy | 144 Tris\nHair Girl | 120 Tris\nPants | 300 Tris\nShirt | 184 Tris\nShoes | 112 Tris\n\nProps:\nHouse 01 | 410 Tris \nHouse 02 | 332 Tris  \nHouse 03 | 458 Tris \nHous
+e 04 | 372 Tris \nHouse 05 | 350 Tris  \nBush 01 | 288 Tris  \nBush 02 | 324 Tris \nBush 03 | 96 Tris \nCar 01 | 1.5k Tris \nCar 02 | 1.8k Tris \nCone | 160 Tris \nFence 01 | 132 Tris \nFence 02 | 60 Tris \nFence 03 | 36 Tris \nFence 04 | 324 Tris \nMailbox | 146 Tris \nStreet Light | 226 Tris \nStreet Light Volume | 16 Tris \nStreet Sign | 144 Tris \nTree 01 | 368 Tris \nTree 02 | 336 Tris \nTile Asphalt Crosswalk | 60 Tris \nTile Asphalt Lines | 60 Tris \nTile Asphalt plain | 10 Tris \nTile Car Park | 20 Tris \nTile Sidewalk | 10 Tris \nTile Sidewalk Corner Inner | 52 Tris \nTile Sidewalk Corner Outer | 36 Tris"
+    linkText: 
+    url:
+  - heading: Animations
+    text:  "These characters doesn´t have any animations. *All models have Humanoid rigs (Rigged/Skinned and Mecanim ready)\n\n*Remember to adjust <Muscle & Settings> in the model´s [Rig > Configure] to adjust overlapping and clipping depending of your source animations."
+    linkText:
+    url:
+  - heading: Modular Design
+    text:  "These characters and props are designed to be modular, making it easy to create a variety of combinations, allowing you to create unique characters and scenes."
+    linkText:
+    url:
+  - heading:
+    text:  "Each asset has been carefully crafted to add a unique touch to your game project!"
+    linkText:
+    url:
+  - heading: Contact/Support
+    text: 
+    linkText: Asset Store Profile
+    url: https://assetstore.unity.com/publishers/20594
+  - heading: 
+    text: 
+    linkText: 
+    url: 
+  loadedLayout: 1

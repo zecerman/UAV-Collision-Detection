@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f60df83ed9b76184da1717ca84eea9c1
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 255299
+  packageName: Neighbourhood Pack
+  packageVersion: 1.0
+  assetPath: Assets/Neighbourhood Pack/Prefabs/Tiles/tile_sidewalk_corner_inner.prefab
+  uploadId: 585703

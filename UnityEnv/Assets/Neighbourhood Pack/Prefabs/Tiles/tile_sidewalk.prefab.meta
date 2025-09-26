@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b206f96b28cec57498f39c1e64165006
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 255299
+  packageName: Neighbourhood Pack
+  packageVersion: 1.0
+  assetPath: Assets/Neighbourhood Pack/Prefabs/Tiles/tile_sidewalk.prefab
+  uploadId: 585703

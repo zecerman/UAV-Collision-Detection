@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a05f18329a472a247a0a0661292b50bc
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 255299
+  packageName: Neighbourhood Pack
+  packageVersion: 1.0
+  assetPath: Assets/Neighbourhood Pack/Materials/neighbourhood material light volume.mat
+  uploadId: 585703

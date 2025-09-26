@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 2bbc64b382aa582438276c5f5d8d0efa
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 255299
+  packageName: Neighbourhood Pack
+  packageVersion: 1.0
+  assetPath: Assets/Neighbourhood Pack/Prefabs/Tiles/tile_car_park.prefab
+  uploadId: 585703

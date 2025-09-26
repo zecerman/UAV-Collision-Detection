@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 97ade54b5f17c91468c4c344d266fe43
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 255299
+  packageName: Neighbourhood Pack
+  packageVersion: 1.0
+  assetPath: Assets/Neighbourhood Pack/Prefabs/Tiles/tile_sidewalk_corner_outer.prefab
+  uploadId: 585703

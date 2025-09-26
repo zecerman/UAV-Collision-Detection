@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 782eced193abc8640bf3af8f971da6e9
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 255299
+  packageName: Neighbourhood Pack
+  packageVersion: 1.0
+  assetPath: Assets/Neighbourhood Pack/Prefabs/Tiles/tile_asphalt_plain.prefab
+  uploadId: 585703

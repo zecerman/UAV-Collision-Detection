@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8eaa232d712709c42900af99aec481dd
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 255299
+  packageName: Neighbourhood Pack
+  packageVersion: 1.0
+  assetPath: Assets/Neighbourhood Pack/Prefabs/Props/street_light.prefab
+  uploadId: 585703

@@ -2,9 +2,8 @@ using UnityEngine;
 
 public class DroneAutopilot : MonoBehaviour
 {
-    // Init vars as required by Unity 
+    // THIS BLOCK INIT VARS AS EXPECTED BY UNITY
     [Header("Hover Target")]
-    [Tooltip("Target world Y (meters). Leave 0 to capture current Y on Start.")]
     public float targetY = 5f;
     public bool lockTargetAtStart = false;
     // END
@@ -14,7 +13,7 @@ public class DroneAutopilot : MonoBehaviour
     {
         public string name;
         public Transform transform;       // where the lift force is applied
-        [HideInInspector] public float throttle; // 0..1 (used only for visual spinners)
+        [HideInInspector] public float throttle; // 0..1 (used only for visual spinners TODO)
     }
 
     public Rigidbody rb;
@@ -31,16 +30,25 @@ public class DroneAutopilot : MonoBehaviour
     public float throttleSlewPerSec = 5f; // smooth visual throttle
     // END
     // THIS BLOCK CONTROLS DRONE BALANCING  
-    [Header("Level Assist (same as before)")]
+    [Header("Level Assist")]
     public float levelAssist = 2.0f;       // torque back to upright
     public float angularDamping = 0.25f;   // spin damping
 
-    [Header("Altitude Stabilizer (roll/pitch PD)")]
+    [Header("Altitude Stabilizer")]
     public float tiltKp = 40f;      // torque per radian of tilt
     public float tiltKd = 8f;       // damping against roll/pitch angular velocity
     public float yawDamp = 2f;      // damping only around up-axis
     public float maxLevelTorque = 200f; // clamp on force drone can exert 
+    // END
+    // THIS BLOCK EXPOSES 2 CONTROLS TO THE RL AGENT
+    public Vector2 tiltCmd;   // x=roll [-1..1], y=pitch [-1..1]
+    public float climbCmd;    // [-1..1] meters/second (or meters per update)
 
+    [Header("RL Steering")]
+    public float maxTiltBiasDeg = 10f;   // how far RL is allowed to lean TODO
+    public float climbRate = 1.0f;       // m/s change to targetY per 1.0 climbCmd
+    //END
+    // DRIVER CODE BEGINS HERE
     float integ;         // integral term
     float prevError;     // for derivative
     bool started;        // for Unity's reference
@@ -64,6 +72,9 @@ public class DroneAutopilot : MonoBehaviour
 
         float dt = Time.fixedDeltaTime;
         float g = Physics.gravity.magnitude;
+
+        // RL: Allow RL to nudge the altitude target smoothly
+        targetY += Mathf.Clamp(climbCmd, -1f, 1f) * climbRate * dt;
 
         //  1) Altitude PID (controls total thrust around weight) 
         float y = rb.position.y;
@@ -98,15 +109,26 @@ public class DroneAutopilot : MonoBehaviour
         //  3) Auto-level torque Robust roll/pitch stabilizer + yaw damping
         Vector3 up = transform.up;
 
-        // Roll/Pitch error as axis-angle from current up to world up:
-        Vector3 axis = Vector3.Cross(up, Vector3.up);             // axis to rotate around to get upright
-        float sinAngle = axis.magnitude;                           // |sin(theta)|
-        float angle = Mathf.Asin(Mathf.Clamp(sinAngle, 0f, 1f));   // radians in [0, pi/2] for hover use
+        // RL: Build a "desired upright" biased by RL tiltCmd
+        float rollDeg  = Mathf.Clamp(tiltCmd.x, -1f, 1f) * maxTiltBiasDeg;  // roll: left/right
+        float pitchDeg = Mathf.Clamp(tiltCmd.y, -1f, 1f) * maxTiltBiasDeg;  // pitch: fwd/back
+
+        // tilt around local axes: pitch about right (x), roll about forward (z)
+        Quaternion desiredTilt =
+            Quaternion.AngleAxis(pitchDeg, transform.right) *
+            Quaternion.AngleAxis(-rollDeg, transform.forward);
+
+        Vector3 desiredUp = desiredTilt * Vector3.up;
+
+        // RL: Compare current 'up' to desiredUp (does not use global 'up')
+        Vector3 axis = Vector3.Cross(up, desiredUp);             // axis to rotate around to get to desired up
+        float sinAngle = axis.magnitude;                         // |sin(theta)|
+        float angle = Mathf.Asin(Mathf.Clamp(sinAngle, 0f, 1f)); // radians in [0, pi/2] for hover use
         Vector3 tiltAxis = (sinAngle > 1e-5f) ? (axis / sinAngle) : Vector3.zero;
 
         // Dampen only roll/pitch angular velocity (remove yaw component)
         Vector3 w = rb.angularVelocity;
-        Vector3 yawAxis = Vector3.up;                              // world-up yaw reference
+        Vector3 yawAxis = Vector3.up;                            // keep yaw damping about world-up
         Vector3 wYaw   = Vector3.Project(w, yawAxis);
         Vector3 wRP    = w - wYaw;
 
@@ -114,7 +136,7 @@ public class DroneAutopilot : MonoBehaviour
         Vector3 torqueRP = tiltAxis * (tiltKp * angle) - wRP * tiltKd;
         Vector3 torqueYaw = -wYaw * yawDamp;
 
-        // Clamp for safety
+        // Clamp
         Vector3 torque = Vector3.ClampMagnitude(torqueRP, maxLevelTorque) + Vector3.ClampMagnitude(torqueYaw, maxLevelTorque);
 
         // Apply

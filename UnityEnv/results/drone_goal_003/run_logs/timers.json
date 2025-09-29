@@ -1,0 +1,42 @@
+{
+    "name": "root",
+    "metadata": {
+        "timer_format_version": "0.1.0",
+        "start_time_seconds": "1759113843",
+        "python_version": "3.10.12 | packaged by Anaconda, Inc. | (main, Jul  5 2023, 19:01:18) [MSC v.1916 64 bit (AMD64)]",
+        "command_line_arguments": "C:\\Users\\zecer\\anaconda3\\envs\\Capstone\\Scripts\\mlagents-learn config/drone_goal.yaml --run-id=drone_goal_003",
+        "mlagents_version": "1.1.0",
+        "mlagents_envs_version": "1.1.0",
+        "communication_protocol_version": "1.5.0",
+        "pytorch_version": "2.2.2+cu121",
+        "numpy_version": "1.23.5",
+        "end_time_seconds": "1759113854"
+    },
+    "total": 10.562661600000865,
+    "count": 1,
+    "self": 0.008210100004362175,
+    "children": {
+        "run_training.setup": {
+            "total": 0.0530691999992996,
+            "count": 1,
+            "self": 0.0530691999992996
+        },
+        "TrainerController.start_learning": {
+            "total": 10.501382299997204,
+            "count": 1,
+            "self": 7.009999535512179e-05,
+            "children": {
+                "TrainerController._reset_env": {
+                    "total": 10.50129620000007,
+                    "count": 1,
+                    "self": 10.50129620000007
+                },
+                "TrainerController._save_models": {
+                    "total": 1.6000001778593287e-05,
+                    "count": 1,
+                    "self": 1.6000001778593287e-05
+                }
+            }
+        }
+    }
+}

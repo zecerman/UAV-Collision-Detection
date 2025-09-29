@@ -16,6 +16,7 @@ public class DroneAutopilot : MonoBehaviour
         public Transform transform;       // where the lift force is applied
         [HideInInspector] public float throttle; // 0..1 (used only for visual spinners)
     }
+}
 
     public Rigidbody rb;
     public Rotor[] rotors = new Rotor[4];

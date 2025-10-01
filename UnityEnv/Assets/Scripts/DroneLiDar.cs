@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
-public class DroneLidar : MonoBehaviour
+public class DroneLiDAR : MonoBehaviour
 {
     [Header("LiDAR parameters")]
     public int horizontalSamples = 36;        // how many rays around

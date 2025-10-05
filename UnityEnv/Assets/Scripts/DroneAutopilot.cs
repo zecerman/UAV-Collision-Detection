@@ -4,7 +4,8 @@ public class DroneAutopilot : MonoBehaviour
 {
     // THIS BLOCK INIT VARS AS EXPECTED BY UNITY
     [Header("Hover Target")]
-    public float targetY = 5f;
+    public float targetY = 5f; // value is arbitrary until SetTargetY is called
+    public float prevY;   // Bucket to assist with math which mutates targetY
     public bool lockTargetAtStart = false;
     // END
     // THIS BLOCK CONTROLS ROTOR BEHAVIOR INCLUDING PHYSICS-ACCURATE FORCE OUTPUT
@@ -13,7 +14,6 @@ public class DroneAutopilot : MonoBehaviour
     {
         public string name;
         public Transform transform;       // where the lift force is applied
-        [HideInInspector] public float throttle; // 0..1 (used only for visual spinners TODO)
     }
 
 
@@ -36,6 +36,7 @@ public class DroneAutopilot : MonoBehaviour
     public float angularDamping = 0.25f;   // spin damping
 
     [Header("Altitude Stabilizer")]
+    // TODO: ALL THESE VALUES ARE PLACEHOLDER AND NEED TO BE TUNED FOR A QUAD WITH 4 ROTORS
     public float tiltKp = 40f;      // torque per radian of tilt
     public float tiltKd = 8f;       // damping against roll/pitch angular velocity
     public float yawDamp = 2f;      // damping only around up-axis
@@ -51,7 +52,6 @@ public class DroneAutopilot : MonoBehaviour
     //END
     // DRIVER CODE BEGINS HERE
     float integ;         // integral term
-    float prevError;     // for derivative
     bool started;        // for Unity's reference
 
     void Reset()
@@ -61,32 +61,36 @@ public class DroneAutopilot : MonoBehaviour
 
     void Start()
     {
-        rb.centerOfMass += new Vector3(0f, -0.05f, 0f); // TODO: PLACEHOLDER ADJUSTMENT TO MANUALLY ADJUST CENTER OF MASS DOWN 
-        if (lockTargetAtStart || Mathf.Approximately(targetY, 0f))
-            targetY = rb.position.y;   // capture current altitude
+        rb.centerOfMass += new Vector3(0f, -0.05f, 0f); // TODO: THIS IS A PLACEHOLDER ADJUSTMENT TO MANUALLY ADJUST CENTER OF MASS DOWN 
+        // Capture current altitude at start
+        targetY = rb.position.y;
+        prevY = rb.position.y;
         started = true;
     }
 
     void FixedUpdate()
     {
+        // Safety checks
         if (!rb || rotors == null || rotors.Length == 0 || !started) return;
 
+        // Physics constants
         float dt = Time.fixedDeltaTime;
         float g = Physics.gravity.magnitude;
 
-        // RL: Allow RL to nudge the altitude target smoothly
+        // RL: Allow RL to nudge the altitude target smoothly during episodes
         targetY += Mathf.Clamp(climbCmd, -1f, 1f) * climbRate * dt;
 
-        //  1) Altitude PID (controls total thrust around weight) 
+        // From this point, Fixed update is organized into discrete sections as denoted by 1), 2), 3), ...
+        // 1) Altitude PID (controls total thrust around weight) 
         float y = rb.position.y;
         float error = targetY - y;
 
-        // integral with clamp
+        // Integral with clamp
         integ = Mathf.Clamp(integ + error * dt, -integralClamp, integralClamp);
 
-        // derivative (on measurement, using error difference)
-        float deriv = (error - prevError) / dt;
-        prevError = error;
+        // Derivative (calculated using "derivitive-on-measurement" using error difference to avoid kick, possible because of global prevY var)
+        float deriv = -(y - prevY) / dt;
+        prevY = y;
 
         // PID output is "extra" Newtons (positive = more lift)
         float extraN = kp * error + ki * integ + kd * deriv;
@@ -97,21 +101,17 @@ public class DroneAutopilot : MonoBehaviour
         float totalDesired = totalHover + extraN;
         float perRotor = Mathf.Max(0f, totalDesired / rotors.Length); // N per rotor
 
-        //  2) Apply lift at each rotor position (keeps tilt effects realistic) 
+        // 2) Apply lift at each rotor position (keeps tilt effects realistic) 
         foreach (var r in rotors)
         {
-            // Smooth a 0..1 "throttle" for visuals (optional)
-            float targetThrottle = Mathf.InverseLerp(0f, totalHover / rotors.Length + Mathf.Abs(maxExtraLift), perRotor);
-            r.throttle = Mathf.MoveTowards(r.throttle, targetThrottle, throttleSlewPerSec * dt);
-
             rb.AddForceAtPosition(transform.up * perRotor, r.transform.position, ForceMode.Force);
         }
 
-        //  3) Auto-level torque Robust roll/pitch stabilizer + yaw damping
+        // 3) Auto-level torque Robust roll/pitch stabilizer + yaw damping
         Vector3 up = transform.up;
 
         // RL: Build a "desired upright" biased by RL tiltCmd
-        float rollDeg  = Mathf.Clamp(tiltCmd.x, -1f, 1f) * maxTiltBiasDeg;  // roll: left/right
+        float rollDeg = Mathf.Clamp(tiltCmd.x, -1f, 1f) * maxTiltBiasDeg;  // roll: left/right
         float pitchDeg = Mathf.Clamp(tiltCmd.y, -1f, 1f) * maxTiltBiasDeg;  // pitch: fwd/back
 
         // tilt around local axes: pitch about right (x), roll about forward (z)
@@ -127,29 +127,32 @@ public class DroneAutopilot : MonoBehaviour
         float angle = Mathf.Asin(Mathf.Clamp(sinAngle, 0f, 1f)); // radians in [0, pi/2] for hover use
         Vector3 tiltAxis = (sinAngle > 1e-5f) ? (axis / sinAngle) : Vector3.zero;
 
-        // Dampen only roll/pitch angular velocity (remove yaw component)
+        // Dampen angular velocity of roll/pitch
         Vector3 w = rb.angularVelocity;
-        Vector3 yawAxis = Vector3.up;                            // keep yaw damping about world-up
-        Vector3 wYaw   = Vector3.Project(w, yawAxis);
-        Vector3 wRP    = w - wYaw;
+        // Dampen yaw about body-aligned axis
+        Vector3 bodyUp = transform.up;
+        Vector3 wYaw = Vector3.Project(w, bodyUp);
 
         // PD torque for roll/pitch + separate yaw damping
+        Vector3 wRP = w - wYaw;     // remove yaw component
         Vector3 torqueRP = tiltAxis * (tiltKp * angle) - wRP * tiltKd;
-        Vector3 torqueYaw = -wYaw * yawDamp;
+        float yawDampEff = yawDamp * Mathf.Clamp01(Mathf.Cos(angle) + 0.25f); // less yaw damping when drone tilted (allows the drone to "carve" turns)
+        Vector3 torqueYaw = -wYaw * yawDampEff;
 
-        // Clamp
+        // Clamp (both)
         Vector3 torque = Vector3.ClampMagnitude(torqueRP, maxLevelTorque) + Vector3.ClampMagnitude(torqueYaw, maxLevelTorque);
 
         // Apply
         rb.AddTorque(torque, ForceMode.Acceleration);
     }
-
-    // TODO: update y value target using external triggers
+    // END
+    // THIS BLOCK CONTROLS ALTITUDE TARGETING
+    // RL: expose a control to change targetY and reset the drone's internal state for the altitude variables
     public void SetTargetY(float newY)
     {
         targetY = newY;
-        // Optional: reset integral to avoid bump
         integ = 0f;
-        prevError = 0f;
+        prevY = newY;
     }
+    // END
 }

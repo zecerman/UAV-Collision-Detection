@@ -22,12 +22,13 @@ public class DroneAgent : Agent
     public float maxEpisodeTime = 30f;
 
     float timer;
-
+    
+    // TODO: thought this was necessary firve code but it has 0 references. Is it necessary? Correct?
     void Awake()
     {
         if (!rb) rb = GetComponent<Rigidbody>();
         if (!autopilot) autopilot = GetComponent<DroneAutopilot>();
-    } //TODO revisit
+    }
 
     public override void OnEpisodeBegin()
     {
@@ -52,12 +53,11 @@ public class DroneAgent : Agent
         );
         goal.position = goalPos;
 
-        // Reset autopilot target to current height
-        autopilot.SetTargetY(transform.position.y);
-        autopilot.tiltCmd = Vector2.zero;
-        autopilot.climbCmd = 0f;
-
-        timer = 0f;
+        // Cleanup autopilot's internal state at beginning of episode
+        autopilot.SetTargetY(transform.position.y);  // Clear targetY
+        autopilot.tiltCmd = Vector2.zero;                   // Clear tilt
+        autopilot.climbCmd = 0f;                            // Clear climb
+        timer = 0f;                                         // Reset timer
     }
 
     public override void CollectObservations(VectorSensor sensor)
@@ -87,50 +87,50 @@ public class DroneAgent : Agent
     {
         // Saftey check, is the script configured correctly in unity?
         var act = actions.ContinuousActions;
-#if UNITY_EDITOR
+        #if UNITY_EDITOR
         if (act.Length != 3)
         {
             Debug.LogError($"Expected 3 continuous actions but got {act.Length}. " +
                         "Check Behavior Parameters > Actions (Continuous=3, Discrete=0).");
             return;
         }
-#endif
+        #endif
 
         // Create 3 actions which the agent can use to control the drone: tiltx, tilty, and climb
         float roll = Mathf.Clamp(act[0], -1f, 1f);
         float pitch = Mathf.Clamp(act[1], -1f, 1f);
         float climb = Mathf.Clamp(act[2], -1f, 1f);
+        // These ^ are the ONLY actions available to the agent
 
         autopilot.tiltCmd = new Vector2(roll, pitch);
         autopilot.climbCmd = climb;
 
-        // Rewards
+        // ===REWARD SECTION===
+        // Globals (resused by multiple rewards/penalties)
+        float tilt = Vector3.Angle(transform.up, Vector3.up);
+
+        // 1) Time penalty
         timer += Time.fixedDeltaTime;
 
-        // Distance shaping
+        // 2) Distance travelled penalty, higher if movoing away from the goal
         float dist = Vector3.Distance(transform.position, goal.position);
         AddReward(-0.001f);                 // step cost
         AddReward(-0.001f * dist);          // push to get closer
 
-        // Upright bonus (encourage safe flight)
-        float tilt = Vector3.Angle(transform.up, Vector3.up);
-        AddReward(Mathf.Lerp(0f, -0.002f, tilt / maxTiltDeg));
-
-        // Success condition
+        // 3) Success condition
         if (dist < successRadius && rb.linearVelocity.magnitude < 0.5f && tilt < 10f)
         {
             AddReward(+2.0f);
             EndEpisode();
         }
 
-        // Failures
+        // FAILURES, PENALIZED HARSHLY
+        // 4) Excessive tilt
         if (tilt > maxTiltDeg || transform.position.y < 0.2f || timer > maxEpisodeTime)
         {
             AddReward(-1.0f);
             EndEpisode();
         }
     }   
-
-        //TODO: add collision penalty
         
 }

@@ -8,6 +8,14 @@ public class DroneAutopilot : MonoBehaviour
     public float prevY;   // Bucket to assist with math which mutates targetY
     public bool lockTargetAtStart = false;
     // END
+    // THIS BLOCK ALLOWS FOR MANUAL USER CONTROL OF DRONE, TODO: REMOVE BEFORE FINAL BUILD
+    [Header("Manual Altitude Step Mode")]
+    public bool stepMode = true;
+    public float stepMeters = 0.25f;
+    public float minY = 0.2f, maxY = 30f;
+    public KeyCode upKey = KeyCode.UpArrow;
+    public KeyCode downKey = KeyCode.DownArrow;
+    // END
     // THIS BLOCK CONTROLS ROTOR BEHAVIOR INCLUDING PHYSICS-ACCURATE FORCE OUTPUT
     [System.Serializable]
     public class Rotor
@@ -67,7 +75,15 @@ public class DroneAutopilot : MonoBehaviour
         prevY = rb.position.y;
         started = true;
     }
+    // Human controls TODO: REMOVE BEFORE FINAL BUILD
+    void Update()
+    {
+        if (!stepMode) return;
 
+        if (Input.GetKeyDown(upKey))   SetTargetY(Mathf.Min(targetY + stepMeters, maxY));
+        if (Input.GetKeyDown(downKey)) SetTargetY(Mathf.Max(targetY - stepMeters, minY));
+    }
+    // RL controls, used by external script
     void FixedUpdate()
     {
         // Safety checks

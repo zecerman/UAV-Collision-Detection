@@ -1,0 +1,10 @@
+  One time configuration: If you do not yet have the Conda environment, you can install it using the environment.yml file in the root of our github and running:
+conda env create -f environment.yml
+  Training only works after activating the conda environment using:
+conda activate Capstone
+  To train, you must navigate to the directory 
+cd .../UnityEnv
+  Begin training with: 
+mlagents-learn config/drone_goal.yaml --run-id=drone_goal_xxx 
+  Resume training with:
+mlagents-learn config/drone_goal.yaml --run-id=drone_goal_xx1 --initialize-from=drone_goal_xxx

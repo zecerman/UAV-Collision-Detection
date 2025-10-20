@@ -6,6 +6,12 @@ using Unity.MLAgents.Sensors;
 [RequireComponent(typeof(Rigidbody))]
 public class DroneAgent : Agent
 {
+    // ADDED FOR PORCH NAVIGATION
+    [Header("Porch Waypoints")]
+    public Transform[] porchWaypoints;  // Assign these manually in Unity
+    private int currentPorchIndex = 0;
+    // END ADDED FOR PORCH NAVIGATION
+
     public Transform goal;
     public DroneAutopilot autopilot;   // reference to the hover script
     public Rigidbody rb;
@@ -46,12 +52,36 @@ public class DroneAgent : Agent
         transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
         // Randomize goal
-        Vector3 goalPos = new Vector3(
-            Random.Range(-goalArea.x, goalArea.x),
-            Random.Range(10f, 15f),     // optional: vary height target
-            Random.Range(-goalArea.z, goalArea.z)
-        );
-        goal.position = goalPos;
+        // REMOVED FOR PORCH NAVIGATION
+        // Vector3 goalPos = new Vector3(
+        //     Random.Range(-goalArea.x, goalArea.x),
+        //     Random.Range(10f, 15f),     // optional: vary height target
+        //     Random.Range(-goalArea.z, goalArea.z)
+        // );
+        // goal.position = goalPos;
+        // END REMOVED FOR PORCH NAVIGATION
+
+        // ADDED FOR PORCH NAVIGATION
+        // Choose the next porch waypoint as the goal
+        if (porchWaypoints != null && porchWaypoints.Length > 0)
+        {
+            goal.position = porchWaypoints[currentPorchIndex].position;
+
+            // Cycle through porch goals each episode
+            currentPorchIndex = (currentPorchIndex + 1) % porchWaypoints.Length;
+        }
+        else
+        {
+            Debug.LogWarning("No porch waypoints assigned! Using default random goal.");
+            Vector3 fallbackGoal = new Vector3(
+                Random.Range(-goalArea.x, goalArea.x),
+                Random.Range(10f, 15f),
+                Random.Range(-goalArea.z, goalArea.z)
+            );
+            goal.position = fallbackGoal;
+}
+        // END ADDED FOR PORCH NAVIGATION
+
 
         // Cleanup autopilot's internal state at beginning of episode
         autopilot.SetTargetY(transform.position.y);  // Clear targetY
@@ -132,5 +162,20 @@ public class DroneAgent : Agent
             EndEpisode();
         }
     }   
+
+    // ADDED FOR PORCH NAVIGATION
+    // visualize porch waypoints in editor
+    void OnDrawGizmosSelected()
+    {
+        if (porchWaypoints == null) return;
+        Gizmos.color = Color.yellow;
+        foreach (var wp in porchWaypoints)
+        {
+            if (wp != null)
+                Gizmos.DrawSphere(wp.position, 0.3f);
+        }
+    }
+    // END ADDED FOR PORCH NAVIGATION
+
         
 }

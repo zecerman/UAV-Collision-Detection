@@ -3,55 +3,39 @@ using UnityEngine;
 public class EnvironmentWind : MonoBehaviour
 {
     [Header("Wind Settings")]
-    public Vector3 baseDirection = new Vector3(1, 0, 0); // base wind direction
-    public float windStrength = 5f; // average wind speed
-    public float gustStrength = 2f; // max gust amplitude
-    public float gustFrequency = 1f; // seconds per gust update
+    // the main direction the wind is blowing (X = east/west, Y = up/down, Z = forward/back)
+    public Vector3 windDirection = new Vector3(1f, 0f, 0f);
+    // the base strength of the wind
+    public float windStrength = 2f;
+    // the extra random strength added by gusts of wind
+    public float gustStrength = 1f;
+    // how often gusts occur (higher = more frequent)
+    public float gustFrequency = 0.5f;
 
-    [Header("Targets")]
-    public Rigidbody[] affectedRigidbodies; // objects affected by wind - really just the drone
-
-    [Header("Scaling")]
-    [Tooltip("How strongly the wind affects drones vs environment")]
-    public float droneForceScale = 1f; // full wind force for drones
-    public float envForceScale = 0.2f; // reduced force for environment objects
-
-    // static wind info accessible by other scripts
-    public static Vector3 currentWind { get; private set; } // current wind vector
-    public static float currentWindStrength { get; private set; } // current wind magnitude
-
-    // private float gustTimer;
-
+    [Header("Target")]
+    // the drone or object the wind will affect
+    public Rigidbody droneRigidbody;
+    // random time offset so gusts are not all the same for every wind object
+    private float timeOffset;
+    // called once at the start
     void Start()
     {
-        // initialize wind with base direction and strength
-        currentWind = baseDirection.normalized * windStrength;
-        currentWindStrength = windStrength;
+        // give each wind object a random start point in the gust pattern
+        timeOffset = Random.Range(0f, 10f);
     }
-
+    
+    // called every physics update
     void FixedUpdate()
     {
-        // generate smooth gust variation using Perlin noise
-        float t = Time.time * 0.1f; // time scaling factor for gust speed
-        float gust = (Mathf.PerlinNoise(t, 0f) - 0.5f) * 2f * gustStrength; // range: [-gustStrength, gustStrength]
+        // if no drone is assigned, do nothing
+        if (droneRigidbody == null) return;
 
-        // calculate new wind strength with gust added
-        float newStrength = Mathf.Max(0f, windStrength + gust); // to avoid negative wind
+        // calculate gust using Perlin noise for smooth randomness
+        float gust = Mathf.PerlinNoise(Time.time * gustFrequency + timeOffset, 0f) * gustStrength;
+        // combine the main wind and the gust to get total wind force
+        Vector3 totalWind = windDirection.normalized * (windStrength + gust);
 
-        // update global wind vector and strength
-        currentWind = baseDirection.normalized * newStrength;
-        currentWindStrength = newStrength;
-
-        // apply wind force to each affected Rigidbody
-        foreach (Rigidbody rb in affectedRigidbodies)
-        {
-            if (rb == null) continue; // skip null entries
-
-            // determine force scale based on tag
-            float scale = rb.CompareTag("Drone") ? droneForceScale : envForceScale;
-
-            // apply wind force in current direction
-            rb.AddForce(currentWind * scale, ForceMode.Force);
-        }
+        // apply the wind force to the drone's rigidbody - continuous force
+        droneRigidbody.AddForce(totalWind, ForceMode.Force);
     }
 }

@@ -39,12 +39,10 @@ public class LiDARSensor : MonoBehaviour
 
     public struct BeamResult
     {
-        public float x, y, z;     // local to DRONE
-        public float dist;
-        public float az, el;
-        public int hit;           // 1/0
-        public string hemi;       // "top"/"bottom"
-        public string emitterName;
+    public float x, y, z;   // local to DRONE
+    public float dist;      // euclidean from drone origin
+    public float az, el;    // angles in degrees
+    public int hit;         // 1/0
     }
 
     public int BeamCount => _beams.Count;
@@ -175,17 +173,11 @@ public class LiDARSensor : MonoBehaviour
             // Package result
             results.Add(new BeamResult
             {
-                x = hitLocal.x,
-                y = hitLocal.y,
-                z = hitLocal.z,
+                x = hitLocal.x, y = hitLocal.y, z = hitLocal.z,
                 dist = dist,
-                az = b.az,
-                el = b.el,
-                hit = didHit ? 1 : 0,
-                hemi = hemisphere == Hemisphere.Top ? "top" : "bottom",
-                emitterName = name
+                az = b.az, el = b.el,
+                hit = didHit ? 1 : 0
             });
-
             // visuals
             if (drawBeams && b.lr)
             {

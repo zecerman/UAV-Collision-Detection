@@ -1,0 +1,29 @@
+{
+    "drone_goal": {
+        "checkpoints": [
+            {
+                "steps": 4328,
+                "file_path": "results\\drone_goal_xx1\\drone_goal\\drone_goal-4328.onnx",
+                "reward": -33.14126031739371,
+                "creation_time": 1760968433.0727825,
+                "auxillary_file_paths": [
+                    "results\\drone_goal_xx1\\drone_goal\\drone_goal-4328.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 4328,
+            "file_path": "results\\drone_goal_xx1\\drone_goal.onnx",
+            "reward": -33.14126031739371,
+            "creation_time": 1760968433.0727825,
+            "auxillary_file_paths": [
+                "results\\drone_goal_xx1\\drone_goal\\drone_goal-4328.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.2.2+cpu"
+    }
+}

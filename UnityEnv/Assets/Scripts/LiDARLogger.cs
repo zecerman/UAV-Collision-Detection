@@ -17,7 +17,6 @@ public class LiDARLogger : MonoBehaviour
     public string outputFileBase = "LiDAR_Scan";
     private string _sessionPath;
     private StreamWriter _writer;
-    private bool _headerWritten = false;
 
     [Header("Motors")]
     [Range(1, 6)] public int motorCount = 4;
@@ -35,7 +34,9 @@ public class LiDARLogger : MonoBehaviour
     float _prevTimestamp = -1f;
     Vector3 _prevPos, _prevVel;
     bool _first = true;
-    private const int _perBeamCols = 9;   // x,y,z,dist,azim,elev,hit,hemi,emitterName
+    private const int _perBeamCols = 7;   // x,y,z,dist,azim,elev,hit
+    private bool _headerWritten = false;
+    private int  _headerBeamTotal = -1;   // how many beams the current header was made for
 
     void Awake()
     {
@@ -94,7 +95,7 @@ public class LiDARLogger : MonoBehaviour
         if (_writer != null) { _writer.Flush(); _writer.Dispose(); _writer = null; }
     }
 
-    void WriteHeader()
+    void WriteHeader(int totalBeams)
     {
         var H = new List<string>
         {
@@ -105,10 +106,7 @@ public class LiDARLogger : MonoBehaviour
         };
         for (int m = 1; m <= motorCount; m++) H.Add($"motor{m}.strength");
 
-        int totalBeams =
-            (topSensor    ? topSensor.BeamCount    : 0) +
-            (bottomSensor ? bottomSensor.BeamCount : 0);
-
+        // 7 columns per beam (no hemi, no emitterName)
         for (int i = 0; i < totalBeams; i++)
         {
             int k = i + 1;
@@ -119,52 +117,52 @@ public class LiDARLogger : MonoBehaviour
             H.Add($"beam{k}.azim(deg)");
             H.Add($"beam{k}.elev(deg)");
             H.Add($"beam{k}.hit(0/1)");
-            H.Add($"beam{k}.hemi");
-            H.Add($"beam{k}.emitterName");
         }
 
         _writer.WriteLine(string.Join(",", H));
         _writer.Flush();
-        _headerWritten = true;
 
-        Debug.Log($"LiDAR header written. top={ (topSensor?topSensor.BeamCount:0) } bottom={ (bottomSensor?bottomSensor.BeamCount:0) }");
+        _headerWritten   = true;
+        _headerBeamTotal = totalBeams;
+
+        Debug.Log($"LiDAR header written for totalBeams={totalBeams}");
     }
 
     void DoScanAndWrite()
-    {
+{
         var inv = CultureInfo.InvariantCulture;
 
-        // Make sure sensors exist
-        if (!topSensor && !bottomSensor)
-        {
-            Debug.LogWarning("LiDARLogger: No sensors found. Assign Top/Bottom sensors.");
-            return;
-        }
+        // 1) SCAN FIRST so we know exactly how many beams we will write this frame
+        List<LiDARSensor.BeamResult> rTop = null, rBot = null;
+        if (topSensor)
+            rTop = topSensor.ScanOnce(maxRange, minRange, topSensor.hitLayers, topSensor.triggerInteraction);
+        if (bottomSensor)
+            rBot = bottomSensor.ScanOnce(maxRange, minRange, bottomSensor.hitLayers, bottomSensor.triggerInteraction);
 
-        // Make sure beams are built; if not, rebuild them
-        if (topSensor && topSensor.BeamCount == 0)    topSensor.RebuildBeams();
-        if (bottomSensor && bottomSensor.BeamCount == 0) bottomSensor.RebuildBeams();
+        int beamsNow = (rTop?.Count ?? 0) + (rBot?.Count ?? 0);
 
-        // Only write header once we know how many beams there are
-        if (!_headerWritten)
+        // 2) If header not written yet or beam count changed, start a NEW file with matching header
+        if (!_headerWritten || _headerBeamTotal != beamsNow)
         {
-            int total = (topSensor?topSensor.BeamCount:0) + (bottomSensor?bottomSensor.BeamCount:0);
-            if (total == 0)
+            if (_headerWritten)
             {
-                Debug.LogWarning("LiDARLogger: BeamCount still 0; will try again next frame.");
-                return;
+                CloseWriter();
+                var dir = Path.Combine(Application.dataPath, "LiDAR_Logs");
+                Directory.CreateDirectory(dir);
+                _sessionPath = Path.Combine(dir, $"{outputFileBase}_{System.DateTime.Now:yyyyMMdd_HHmmss}.csv");
+                var fsNew = new FileStream(_sessionPath, FileMode.Create, FileAccess.Write, FileShare.Read);
+                _writer = new StreamWriter(fsNew);
             }
-            WriteHeader();
+            WriteHeader(beamsNow);
         }
 
+        // 3) Build row prefix (timestamp/orientation/derivatives/motors)
         float t = Time.time;
         Vector3 dronePos = transform.position;
 
-        // Unity eulers: x=pitch, y=yaw, z=roll
-        Vector3 e = transform.rotation.eulerAngles;
+        Vector3 e = transform.rotation.eulerAngles; // x=pitch, y=yaw, z=roll
         float yaw = e.y, pitch = e.x, roll = e.z;
 
-        // derivatives
         Vector3 vel = Vector3.zero, acc = Vector3.zero;
         if (!_first)
         {
@@ -184,26 +182,17 @@ public class LiDARLogger : MonoBehaviour
         for (int m = 0; m < motorCount; m++)
             row.Add((m < motorStrength.Length ? motorStrength[m] : 0f).ToString("F3", inv));
 
-        // SCAN: top then bottom, so ordering is stable
-        if (topSensor)
-        {
-            var rTop = topSensor.ScanOnce(maxRange, minRange, environmentLayers, triggerMode);
-            AppendBeams(row, rTop, inv);
-        }
-        if (bottomSensor)
-        {
-            var rBot = bottomSensor.ScanOnce(maxRange, minRange, environmentLayers, triggerMode);
-            AppendBeams(row, rBot, inv);
-        }
+        // 4) Append beams we actually scanned
+        if (rTop != null) AppendBeams(row, rTop, inv);
+        if (rBot != null) AppendBeams(row, rBot, inv);
 
-        // sanity
-        int baseCols = 10 + motorCount; // timestamp + 9 imu/orient + motors
-        int perBeam  = 9;
-        int expected = baseCols +
-                       ((topSensor?topSensor.BeamCount:0) + (bottomSensor?bottomSensor.BeamCount:0)) * perBeam;
+        // 5) Sanity check against THIS row's beam count with 7 cols/beam
+        int baseCols = 10 + motorCount;
+        int expected = baseCols + beamsNow * _perBeamCols; // _perBeamCols = 7
         if (row.Count != expected)
-            Debug.LogError($"CSV column mismatch: have {row.Count}, expected {expected}");
+            Debug.LogError($"CSV column mismatch: have {row.Count}, expected {expected} (beamsNow={beamsNow})");
 
+        // 6) Write row
         _writer.WriteLine(string.Join(",", row));
         _writer.Flush();
 
@@ -213,21 +202,20 @@ public class LiDARLogger : MonoBehaviour
         _prevVel = vel;
     }
 
+
     static void AppendBeams(List<string> row, List<LiDARSensor.BeamResult> results, CultureInfo inv)
     {
-        for (int i = 0; i < results.Count; i++)
-        {
-            var r = results[i];
-            row.Add(r.x.ToString("F4", inv));
-            row.Add(r.y.ToString("F4", inv));
-            row.Add(r.z.ToString("F4", inv));
-            row.Add(r.dist.ToString("F4", inv));
-            row.Add(r.az.ToString("F1", inv));
-            row.Add(r.el.ToString("F1", inv));
-            row.Add(r.hit != 0 ? "1" : "0");
-            row.Add(r.hemi);
-            row.Add(r.emitterName ?? ""); 
-        }
+    for (int i = 0; i < results.Count; i++)
+    {
+        var r = results[i];
+        row.Add(r.x.ToString("F4", inv));
+        row.Add(r.y.ToString("F4", inv));
+        row.Add(r.z.ToString("F4", inv));
+        row.Add(r.dist.ToString("F4", inv));
+        row.Add(r.az.ToString("F1", inv));
+        row.Add(r.el.ToString("F1", inv));
+        row.Add(r.hit != 0 ? "1" : "0");
+    }
     }
 }
 

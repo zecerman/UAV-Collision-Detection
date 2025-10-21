@@ -4,7 +4,7 @@
 default_settings:
   trainer_type: ppo
   hyperparameters:
-    batch_size: 1024
+    batch_size: 2048
     buffer_size: 40960
     learning_rate: 3.0e-4
     beta: 5.0e-3
@@ -15,14 +15,14 @@ default_settings:
   network_settings:
     normalize: true
     hidden_units: 256
-    num_layers: 2
+    num_layers: 3
     vis_encode_type: simple
   reward_signals:
     extrinsic:
-      gamma: 0.99
+      gamma: 0.995
       strength: 1.0
-  time_horizon: 64
-  max_steps: 5.0e6
+  time_horizon: 128
+  max_steps: 3.0e6
   summary_freq: 10000
 
 behaviors:

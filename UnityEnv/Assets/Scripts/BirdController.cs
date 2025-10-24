@@ -7,9 +7,9 @@ public class BirdController : MonoBehaviour
     public class Bird
     {
         public Transform birdObject; // bird object in the scene
-        public float speed = 1f; // movement speed
+        public float speed = 0.2f; // movement speed
         public float turnSpeed = 1f; // how quickly it turns toward target
-        public float changeTargetInterval = 5f; // how often to pick a new target
+        public float changeTargetInterval = 500f; // how often to pick a new target
 
         [HideInInspector] public Vector3 targetPosition; // current target position
         [HideInInspector] public float timer; // counts time to switch targets

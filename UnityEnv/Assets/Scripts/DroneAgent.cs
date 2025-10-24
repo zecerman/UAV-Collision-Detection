@@ -12,9 +12,13 @@ public class DroneAgent : Agent
     private int currentPorchIndex = 0;
     // END ADDED FOR PORCH NAVIGATION
 
+    // GLOBALS
     public Transform goal;
     public DroneAutopilot autopilot;   // reference to the hover script
     public Rigidbody rb;
+    private float prevDist;
+    float timer;
+    // END
 
     [Header("Episode Bounds")]
     public Vector3 startArea = new Vector3(5, 2, 5); // TODO: hard coded positions are a placeholder solution
@@ -25,11 +29,31 @@ public class DroneAgent : Agent
     [Header("Success / Safety")]
     public float successRadius = 1.0f;
     public float maxTiltDeg = 45f; // TODO: TOO FAR?
-    public float maxEpisodeTime = 30f;
+    public float maxEpisodeTime = 90f;
 
-    float timer;
-    
-    // TODO: thought this was necessary firve code but it has 0 references. Is it necessary? Correct?
+    // COLLISION PENALTY HANDLING
+        [Header("Collision Penalties")]
+    [Tooltip("Base penalty when touching an obstacle (applied once per cooldown).")]
+    public float collisionPenalty = -0.2f;
+
+    [Tooltip("Additional penalty scaled by impact speed")]
+    public float impactScale = -0.02f;
+
+    [Tooltip("If true, a 'hard crash' (floor or very strong impact) ends the episode.")]
+    public bool endEpisodeOnCrash = true;
+
+    [Tooltip("If relative speed exceeds this on, treat as hard crash.")]
+    public float hardCrashSpeed = 5.0f;
+
+    [Tooltip("Minimum time between collision penalties to prevent spam.")]
+    public float collisionCooldown = 0.25f;
+    // Extra globals to manage internal collision state (consumed in OnActionReceived)
+    private bool collisionQueued = false;
+    private float queuedCollisionSpeed = 0f;
+    private float lastCollisionPenaltyTime = -999f;
+    private float bestDist; private float noImproveTimer; // Related, do not uncouple
+    // END
+    // TODO: thought this was necessary dirver code but it has 0 references. Is it necessary? Correct?
     void Awake()
     {
         if (!rb) rb = GetComponent<Rigidbody>();
@@ -41,7 +65,11 @@ public class DroneAgent : Agent
         // Reset physics
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
-
+        
+        // Recall previous distance to goal (consumed by reward calculation)
+        prevDist = Vector3.Distance(transform.position, goal.position);
+        bestDist = prevDist; noImproveTimer = 0f;
+        
         // Randomize start
         Vector3 startPos = new Vector3(
             Random.Range(-startArea.x, startArea.x),
@@ -51,17 +79,7 @@ public class DroneAgent : Agent
         transform.position = startPos;
         transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
-        // Randomize goal
-        // REMOVED FOR PORCH NAVIGATION
-        // Vector3 goalPos = new Vector3(
-        //     Random.Range(-goalArea.x, goalArea.x),
-        //     Random.Range(10f, 15f),     // optional: vary height target
-        //     Random.Range(-goalArea.z, goalArea.z)
-        // );
-        // goal.position = goalPos;
-        // END REMOVED FOR PORCH NAVIGATION
-
-        // ADDED FOR PORCH NAVIGATION
+        // ADDED FOR PORCH NAVIGATION (randomized goal)
         // Choose the next porch waypoint as the goal
         if (porchWaypoints != null && porchWaypoints.Length > 0)
         {
@@ -84,7 +102,7 @@ public class DroneAgent : Agent
 
 
         // Cleanup autopilot's internal state at beginning of episode
-        autopilot.SetTargetY(transform.position.y);  // Clear targetY
+        autopilot.SetTargetY(transform.position.y);         // Clear targetY
         autopilot.tiltCmd = Vector2.zero;                   // Clear tilt
         autopilot.climbCmd = 0f;                            // Clear climb
         timer = 0f;                                         // Reset timer
@@ -138,29 +156,57 @@ public class DroneAgent : Agent
         // ===REWARD SECTION===
         // Globals (resused by multiple rewards/penalties)
         float tilt = Vector3.Angle(transform.up, Vector3.up);
-
-        // 1) Time penalty
         timer += Time.fixedDeltaTime;
-
-        // 2) Distance travelled penalty, higher if movoing away from the goal
+        // REWARDS
+        // Distance reward, higher if moving towards the goal but becomes negative if moving away
         float dist = Vector3.Distance(transform.position, goal.position);
-        AddReward(-0.001f);                 // step cost
-        AddReward(-0.001f * dist);          // push to get closer
+        if (dist + 0.1f < bestDist) { bestDist = dist; noImproveTimer = 0f; }
+        else noImproveTimer += Time.fixedDeltaTime;
+        if (noImproveTimer > 5f) { AddReward(-1f); EndEpisode(); return; } // Early stopping condition for no improvement, TODO: overly penalizing?
+        // Always:
+        AddReward(0.2f * (prevDist - dist));   // + if closer, - if farther
+        prevDist = dist;
 
-        // 3) Success condition
+        // Alignment reward, reward for facing toward the goal, can be negative if facing away
+        Vector3 dir = (goal.position - transform.position).normalized;
+        float align = Vector3.Dot(transform.forward, dir);      // -1..1
+        AddReward(0.02f * align);
+
+        // Success condition
         if (dist < successRadius && rb.linearVelocity.magnitude < 0.5f && tilt < 10f)
         {
-            AddReward(+2.0f);
+            AddReward(+50.0f);
             EndEpisode();
+        }
+        // END
+        // FAILURES
+        // Collision penalty handling
+        if (collisionQueued && (Time.time - lastCollisionPenaltyTime) >= collisionCooldown)
+        {
+            // Collision are always bad, punish
+            float penalty = collisionPenalty + (impactScale * queuedCollisionSpeed);
+            AddReward(penalty); 
+            // If bad enough, a collision can end the episode
+            if (endEpisodeOnCrash && (queuedCollisionSpeed >= hardCrashSpeed))
+            {
+                AddReward(-1.0f); // fatal crash has extra penalty
+                EndEpisode();
+                return;
+            }
+
+            // Consume event and start cooldown
+            collisionQueued = false;
+            queuedCollisionSpeed = 0f;
+            lastCollisionPenaltyTime = Time.time;
         }
 
-        // FAILURES, PENALIZED HARSHLY
-        // 4) Excessive tilt
-        if (tilt > maxTiltDeg || transform.position.y < 0.2f || timer > maxEpisodeTime)
+        // Excessive tilt or timeout
+        if (tilt > maxTiltDeg || timer > maxEpisodeTime)
         {
             AddReward(-1.0f);
-            EndEpisode();
+            EndEpisode();   // failure reached, should end episode
         }
+        
     }   
 
     // ADDED FOR PORCH NAVIGATION

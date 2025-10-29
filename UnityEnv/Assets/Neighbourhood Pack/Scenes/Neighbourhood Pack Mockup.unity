@@ -23742,6 +23742,22 @@ MonoBehaviour:
     currentVelocity: {x: 0, y: 0, z: 0}
   areaSize: {x: 50, y: 20, z: 50}
   areaCenter: {x: 0, y: 0, z: 0}
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 0
+  floorClearance: 1.5
+  minCruise: 2
+  maxCruise: 8
+  raycastHeight: 100
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 0
+  lookAhead: 5
+  probeRadius: 0.6
+  sideProbeAngle: 25
+  sideProbeScale: 0.8
+  avoidStrength: 2
+  maxSteerPerSec: 6
 --- !u!4 &1708917802
 Transform:
   m_ObjectHideFlags: 0

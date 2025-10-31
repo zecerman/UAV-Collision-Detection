@@ -4,17 +4,17 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class LiDARSensor2 : MonoBehaviour
 {
-    public enum Hemisphere { Top, Bottom }
+    public enum Hemisphere { Forward, Backward }
 
     [Header("Sensor Setup")]
-    public Hemisphere hemisphere = Hemisphere.Top;
+    public Hemisphere hemisphere = Hemisphere.Forward;
 
     [Tooltip("Reference to the DRONE root (the one that holds the logger).")]
     public Transform droneRoot;
 
     [Header("Coverage")]
-    [Range(5, 60)] public int azimuthStepDeg = 15;
-    [Range(5, 60)] public int elevationStepDeg = 15;
+    [Range(5, 60)] public int azimuthStepDeg = 15;   // around the local up axis
+    [Range(5, 60)] public int elevationStepDeg = 15; // from horizon (-) to zenith (+)
 
     [Tooltip("Meters to start ahead of sensor to avoid self-hits.")]
     [Range(0f, 1f)] public float selfClearance = 0.25f;
@@ -69,18 +69,20 @@ public class LiDARSensor2 : MonoBehaviour
         int azStep = Mathf.Max(1, azimuthStepDeg);
         int elStep = Mathf.Max(1, elevationStepDeg);
 
-        // Build a half-sphere relative to the sensor's local forward
-        if (hemisphere == Hemisphere.Top)
+        // Forward hemisphere: directions centered on +Z (Vector3.forward)
+        // Backward hemisphere: directions centered on -Z (Vector3.back)
+        for (int az = 0; az < 360; az += azStep)
         {
-            for (int az = 0; az < 360; az += azStep)
-                for (int el = elStep; el <= 90; el += elStep)
-                    AddBeam(az, +el);
-        }
-        else
-        {
-            for (int az = 0; az < 360; az += azStep)
-                for (int el = -elStep; el >= -90; el -= elStep)
-                    AddBeam(az, el);
+            for (int el = -90 + elStep; el <= 90 - elStep; el += elStep)
+            {
+                // include the 90° cap once
+                if (el == 90 - elStep)
+                {
+                    AddBeam(az,  90);
+                    AddBeam(az, -90);
+                }
+                AddBeam(az, el);
+            }
         }
 
         if (drawBeams)
@@ -119,15 +121,18 @@ public class LiDARSensor2 : MonoBehaviour
         if (!droneRoot) droneRoot = transform.root;
 
         Vector3 dronePos = droneRoot.position;
-        Quaternion droneRot = droneRoot.rotation; // used for local conversion only
+
+        // Base direction depends on hemisphere type
+        Vector3 baseDirLocal = (hemisphere == Hemisphere.Forward) ? Vector3.forward : Vector3.back;
 
         for (int i = 0; i < _beams.Count; i++)
         {
             var b = _beams[i];
 
-            // IMPORTANT: use the SENSOR's rotation so tilt/aim is respected
+            // Build direction in SENSOR space, then rotate to world
             Quaternion q = Quaternion.Euler(b.el, b.az, 0f);
-            Vector3 dirWorld = (transform.rotation) * (q * Vector3.forward);
+            Vector3 dirLocal = q * baseDirLocal;
+            Vector3 dirWorld = transform.rotation * dirLocal;
             dirWorld.Normalize();
 
             Vector3 start = transform.position + dirWorld * selfClearance;

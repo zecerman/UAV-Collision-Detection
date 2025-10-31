@@ -7,8 +7,8 @@ using UnityEngine;
 public class LiDARLogger2 : MonoBehaviour
 {
     [Header("Sensors")]
-    public LiDARSensor frontSensor;  // assign your front cylinder's LiDARSensor
-    public LiDARSensor backSensor;   // assign your back cylinder's LiDARSensor (tilted)
+    public LiDARSensor2 frontSensor;  // attach the "Front Sensor" object's LiDARSensor2
+    public LiDARSensor2 backSensor;   // attach the "Back Sensor" object's LiDARSensor2
 
     [Header("Timing")]
     public float scanInterval = 0.5f;
@@ -32,8 +32,7 @@ public class LiDARLogger2 : MonoBehaviour
 
     [Header("Output Location")]
     [Tooltip("Folder name for NEW logs. Created if missing.")]
-    public string logsFolderName = "LiDAR_Logs_New";
-
+    public string logsFolderName = "LiDAR_Logs";
     [Tooltip("True: use Application.persistentDataPath (recommended). False: use Assets.")]
     public bool usePersistentPath = true;
 
@@ -41,7 +40,7 @@ public class LiDARLogger2 : MonoBehaviour
     {
         var root = usePersistentPath ? Application.persistentDataPath : Application.dataPath;
         var full = Path.Combine(root, logsFolderName);
-        Directory.CreateDirectory(full);
+        Directory.CreateDirectory(full); // ensures folder exists
         return full;
     }
 
@@ -71,22 +70,37 @@ public class LiDARLogger2 : MonoBehaviour
 
     void Start()
     {
-        // Optional auto-find by name if you prefer:
+        // Auto-find by exact names if not assigned in the Inspector.
         if (!frontSensor)
         {
-            var f = GameObject.Find("Cylinder"); // your front object name from screenshot
-            if (!f) f = GameObject.Find("FrontSensor");
-            if (f) frontSensor = f.GetComponent<LiDARSensor>();
+            var f = GameObject.Find("Front Sensor");
+            if (f) frontSensor = f.GetComponent<LiDARSensor2>();
         }
         if (!backSensor)
         {
-            var b = GameObject.Find("BackSensor"); // your back object name from screenshot
-            if (b) backSensor = b.GetComponent<LiDARSensor>();
+            var b = GameObject.Find("Back Sensor");
+            if (b) backSensor = b.GetComponent<LiDARSensor2>();
         }
 
         // Ensure both sensors know the drone root (this object)
         if (frontSensor && !frontSensor.droneRoot) frontSensor.droneRoot = transform;
         if (backSensor  && !backSensor.droneRoot)  backSensor.droneRoot  = transform;
+
+        // Apply shared physics parameters to both sensors (keeps behavior in sync)
+        if (frontSensor)
+        {
+            frontSensor.hitLayers = environmentLayers;
+            frontSensor.triggerInteraction = triggerMode;
+            frontSensor.maxRange = maxRange;
+            frontSensor.minRange = minRange;
+        }
+        if (backSensor)
+        {
+            backSensor.hitLayers = environmentLayers;
+            backSensor.triggerInteraction = triggerMode;
+            backSensor.maxRange = maxRange;
+            backSensor.minRange = minRange;
+        }
 
         StartNewSessionFile();
 
@@ -105,7 +119,9 @@ public class LiDARLogger2 : MonoBehaviour
     }
 
     void OnApplicationQuit() { CloseWriter(); }
-    void OnDestroy()         { CloseWriter();
+    void OnDestroy()
+    {
+        CloseWriter();
     #if UNITY_EDITOR
         UnityEditor.AssetDatabase.Refresh();
     #endif
@@ -152,11 +168,11 @@ public class LiDARLogger2 : MonoBehaviour
         var inv = CultureInfo.InvariantCulture;
 
         // 1) SCAN FIRST so we know beam count
-        List<LiDARSensor.BeamResult> rFront = null, rBack = null;
+        List<LiDARSensor2.BeamResult> rFront = null, rBack = null;
         if (frontSensor)
-            rFront = frontSensor.ScanOnce(maxRange, minRange, frontSensor.hitLayers, frontSensor.triggerInteraction);
+            rFront = frontSensor.ScanOnce(frontSensor.maxRange, frontSensor.minRange, frontSensor.hitLayers, frontSensor.triggerInteraction);
         if (backSensor)
-            rBack  = backSensor.ScanOnce (maxRange, minRange, backSensor.hitLayers,  backSensor.triggerInteraction);
+            rBack  = backSensor.ScanOnce (backSensor.maxRange,  backSensor.minRange,  backSensor.hitLayers,  backSensor.triggerInteraction);
 
         int beamsNow = (rFront?.Count ?? 0) + (rBack?.Count ?? 0);
 
@@ -217,7 +233,7 @@ public class LiDARLogger2 : MonoBehaviour
         _prevVel = vel;
     }
 
-    static void AppendBeams(List<string> row, List<LiDARSensor.BeamResult> results, CultureInfo inv)
+    static void AppendBeams(List<string> row, List<LiDARSensor2.BeamResult> results, CultureInfo inv)
     {
         for (int i = 0; i < results.Count; i++)
         {

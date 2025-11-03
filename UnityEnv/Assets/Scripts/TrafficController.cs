@@ -16,9 +16,17 @@ public class TrafficController : MonoBehaviour
 {
     public CarPath[] cars; // a list of all cars and their paths
 
+    // clamp deltaTime to avoid extreme jumps
+    private float GetStableDeltaTime()
+    {
+        return Mathf.Clamp(Time.deltaTime, 0f, 0.05f); // max ~20 FPS
+    }
+
     // called once per frame
     void Update()
     {
+        float dt = GetStableDeltaTime();
+
         // go through each car in the list
         foreach (var carPath in cars)
         {
@@ -30,7 +38,9 @@ public class TrafficController : MonoBehaviour
             Vector3 dir = (target.position - carPath.car.position).normalized;
 
             // move car
-            carPath.car.position += dir * carPath.speed * Time.deltaTime;
+            // carPath.car.position += dir * carPath.speed * dt;
+            carPath.car.position = Vector3.MoveTowards(carPath.car.position, target.position, carPath.speed * dt);
+
 
             // check if reached waypoint
             float dist = Vector3.Distance(carPath.car.position, target.position);
@@ -44,6 +54,20 @@ public class TrafficController : MonoBehaviour
             // make car face direction of travel
             if (dir != Vector3.zero)
                 carPath.car.rotation = Quaternion.LookRotation(dir);
+        }
+    }
+
+    // call this at the start of each episode to reset cars
+    public void ResetCars()
+    {
+        foreach (var carPath in cars)
+        {
+            if (carPath.car == null || carPath.waypoints.Length < 2) continue;
+
+            carPath.currentWaypoint = 0;
+            carPath.car.position = carPath.waypoints[0].position;
+            Vector3 dir = (carPath.waypoints[1].position - carPath.waypoints[0].position).normalized;
+            carPath.car.rotation = Quaternion.LookRotation(dir);
         }
     }
 }

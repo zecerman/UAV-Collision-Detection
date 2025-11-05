@@ -5611,10 +5611,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Drone (1)
       objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: b591f5edb6cd10e4b8e03c10020224c5, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -5907,379 +5903,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2, y: 0.2139563, z: 10}
   m_Center: {x: 0, y: 0.0069779307, z: 0}
---- !u!1001 &426605424
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -0.99
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 12.21
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0.74
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8383124558419344257, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Motor_06
-      objectReference: {fileID: 0}
-    - target: {fileID: -8380157826906577798, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Motor_03
-      objectReference: {fileID: 0}
-    - target: {fileID: -6733177361254619370, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Motor_01
-      objectReference: {fileID: 0}
-    - target: {fileID: -5568371526223589888, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Front Sensor
-      objectReference: {fileID: 0}
-    - target: {fileID: -5546747315237514756, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Top Wing
-      objectReference: {fileID: 0}
-    - target: {fileID: -5063223942988036812, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Bottom Wing
-      objectReference: {fileID: 0}
-    - target: {fileID: -4636300777304409883, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Drone Body
-      objectReference: {fileID: 0}
-    - target: {fileID: -3798597711559607027, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Motor_05
-      objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Drone3_unattached
-      objectReference: {fileID: 0}
-    - target: {fileID: 2800250516343163423, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Motor_04
-      objectReference: {fileID: 0}
-    - target: {fileID: 7833249854982934595, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Back Sensor
-      objectReference: {fileID: 0}
-    - target: {fileID: 8513859187771203891, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Support Beams
-      objectReference: {fileID: 0}
-    - target: {fileID: 8700725330082129686, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      propertyPath: m_Name
-      value: Motor_02
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects:
-    - {fileID: 3849762623622064168, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-    - {fileID: 6512510688612296998, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-    - {fileID: 6919683763462532184, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-    - {fileID: 5245042011116262203, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-    - {fileID: -2914413575082383075, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-    - {fileID: -6577237425059042219, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-    - {fileID: 4214726985332892257, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-    - {fileID: 2971542036940430761, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-    m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 426605428}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 426605434}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 426605433}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 426605432}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 426605431}
-    - targetCorrespondingSourceObject: {fileID: -5568371526223589888, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 426605430}
-    - targetCorrespondingSourceObject: {fileID: 7833249854982934595, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 426605429}
-  m_SourcePrefab: {fileID: 100100000, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
---- !u!1 &426605425 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-  m_PrefabInstance: {fileID: 426605424}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &426605426 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7833249854982934595, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-  m_PrefabInstance: {fileID: 426605424}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &426605427 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -5568371526223589888, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
-  m_PrefabInstance: {fileID: 426605424}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &426605428
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 426605425}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2d9b54a9dc1cfb94882a631578257d40, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LiDARLogger2
-  frontSensor: {fileID: 426605430}
-  backSensor: {fileID: 426605429}
-  scanInterval: 0.5
-  outputFileBase: LiDAR_Scan
-  motorCount: 4
-  motorStrength:
-  - 0
-  - 0
-  - 0
-  - 0
-  - 0
-  - 0
-  maxRange: 30
-  minRange: 0.05
-  environmentLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  triggerMode: 1
-  logsFolderName: LiDAR_Logs 2
-  usePersistentPath: 1
---- !u!114 &426605429
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 426605426}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a721aeb49443dd445bc886de975c6ccb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LiDARSensor2
-  hemisphere: 1
-  droneRoot: {fileID: 0}
-  azimuthStepDeg: 15
-  elevationStepDeg: 15
-  selfClearance: 0.25
-  hitLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  triggerInteraction: 1
-  drawBeams: 1
-  lineMaterial: {fileID: 0}
-  lineWidth: 0.05
-  missColor: {r: 0.9924528, g: 0, b: 0, a: 1}
-  hitColor: {r: 0, g: 1, b: 0, a: 1}
-  maxRange: 10
-  minRange: 0.05
---- !u!114 &426605430
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 426605427}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a721aeb49443dd445bc886de975c6ccb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LiDARSensor2
-  hemisphere: 0
-  droneRoot: {fileID: 0}
-  azimuthStepDeg: 15
-  elevationStepDeg: 15
-  selfClearance: 0.25
-  hitLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  triggerInteraction: 1
-  drawBeams: 1
-  lineMaterial: {fileID: 0}
-  lineWidth: 0.05
-  missColor: {r: 1, g: 0.1838857, b: 0, a: 1}
-  hitColor: {r: 0, g: 1, b: 0, a: 1}
-  maxRange: 10
-  minRange: 0.05
---- !u!114 &426605431
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 426605425}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a777dfad00d5e55459671968ffc509ca, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DroneAgent
-  agentParameters:
-    maxStep: 0
-  hasUpgradedFromAgentParameters: 1
-  MaxStep: 0
-  porchWaypoints: []
-  goal: {fileID: 0}
-  autopilot: {fileID: 0}
-  rb: {fileID: 0}
-  startArea: {x: 5, y: 2, z: 5}
-  goalArea: {x: 8, y: 2, z: 8}
-  minStartY: 2
-  maxStartY: 6
-  successRadius: 1
-  maxTiltDeg: 45
-  maxEpisodeTime: 90
-  collisionPenalty: -0.2
-  impactScale: -0.02
-  endEpisodeOnCrash: 1
-  hardCrashSpeed: 5
-  collisionCooldown: 0.25
---- !u!114 &426605432
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 426605425}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5d1c4e0b1822b495aa52bc52839ecb30, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
-  m_BrainParameters:
-    VectorObservationSize: 1
-    NumStackedVectorObservations: 1
-    m_ActionSpec:
-      m_NumContinuousActions: 0
-      BranchSizes: 01000000
-    VectorActionSize: 01000000
-    VectorActionDescriptions: []
-    VectorActionSpaceType: 0
-    hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 0}
-  m_InferenceDevice: 0
-  m_BehaviorType: 0
-  m_BehaviorName: My Behavior
-  TeamId: 0
-  m_UseChildSensors: 1
-  m_UseChildActuators: 1
-  m_ObservableAttributeHandling: 0
---- !u!54 &426605433
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 426605425}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
---- !u!114 &426605434
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 426605425}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e78bc0714fd9a274081e9f011656f5b8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DroneAutopilot
-  targetY: 5
-  prevY: 0
-  lockTargetAtStart: 0
-  stepMode: 1
-  stepMeters: 0.25
-  minY: 0.2
-  maxY: 30
-  upKey: 273
-  downKey: 274
-  rb: {fileID: 0}
-  rotors:
-  - name: 
-    transform: {fileID: 0}
-  - name: 
-    transform: {fileID: 0}
-  - name: 
-    transform: {fileID: 0}
-  - name: 
-    transform: {fileID: 0}
-  kp: 40
-  ki: 5
-  kd: 25
-  integralClamp: 100
-  maxExtraLift: 400
-  throttleSlewPerSec: 5
-  levelAssist: 2
-  angularDamping: 0.25
-  tiltKp: 40
-  tiltKd: 8
-  yawDamp: 2
-  maxLevelTorque: 200
-  tiltCmd: {x: 0, y: 0}
-  climbCmd: 0
-  maxTiltBiasDeg: 10
-  climbRate: 1
 --- !u!1 &427028522
 GameObject:
   m_ObjectHideFlags: 0
@@ -7138,10 +6761,6 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 91f309ce4a0174e4a98701b73c3b926d, type: 3}
       propertyPath: m_Name
       value: Drone2
-      objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: 91f309ce4a0174e4a98701b73c3b926d, type: 3}
-      propertyPath: m_IsActive
-      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -10424,6 +10043,39 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &709112326 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7833249854982934595, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+  m_PrefabInstance: {fileID: 1816513573}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &709112330
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 709112326}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a721aeb49443dd445bc886de975c6ccb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LiDARSensor2
+  hemisphere: 1
+  droneRoot: {fileID: 0}
+  azimuthStepDeg: 15
+  elevationStepDeg: 15
+  selfClearance: 0.25
+  hitLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  triggerInteraction: 1
+  drawBeams: 1
+  lineMaterial: {fileID: 0}
+  lineWidth: 0.05
+  missColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
+  hitColor: {r: 0, g: 1, b: 0, a: 1}
+  maxRange: 30
+  minRange: 0.05
 --- !u!1 &715168960
 GameObject:
   m_ObjectHideFlags: 0
@@ -17762,6 +17414,39 @@ Transform:
   m_Children: []
   m_Father: {fileID: 934689653}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1334568338 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -5568371526223589888, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+  m_PrefabInstance: {fileID: 1816513573}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1334568342
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1334568338}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a721aeb49443dd445bc886de975c6ccb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LiDARSensor2
+  hemisphere: 0
+  droneRoot: {fileID: 0}
+  azimuthStepDeg: 15
+  elevationStepDeg: 15
+  selfClearance: 0.25
+  hitLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  triggerInteraction: 1
+  drawBeams: 1
+  lineMaterial: {fileID: 0}
+  lineWidth: 0.05
+  missColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
+  hitColor: {r: 0, g: 1, b: 0, a: 1}
+  maxRange: 30
+  minRange: 0.05
 --- !u!1 &1335543229
 GameObject:
   m_ObjectHideFlags: 0
@@ -26212,6 +25897,80 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2.0000005, y: 0.2139563, z: 10.000002}
   m_Center: {x: 0, y: 0.0069779307, z: 0}
+--- !u!1001 &1816513573
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.68
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 15.32
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -10.72
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -5568371526223589888, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Front Sensor
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Drone3_unattached
+      objectReference: {fileID: 0}
+    - target: {fileID: 7833249854982934595, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Back Sensor
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1826266008}
+    - targetCorrespondingSourceObject: {fileID: -5568371526223589888, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1334568342}
+    - targetCorrespondingSourceObject: {fileID: 7833249854982934595, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 709112330}
+  m_SourcePrefab: {fileID: 100100000, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
 --- !u!1001 &1816556438
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -26505,6 +26264,43 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2, y: 0.2139563, z: 10}
   m_Center: {x: 0, y: 0.0069779307, z: 0}
+--- !u!1 &1826266006 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+  m_PrefabInstance: {fileID: 1816513573}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1826266008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1826266006}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d9b54a9dc1cfb94882a631578257d40, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LiDARLogger2
+  frontSensor: {fileID: 1334568342}
+  backSensor: {fileID: 709112330}
+  scanInterval: 0.5
+  outputFileBase: LiDAR_Scan
+  motorCount: 4
+  motorStrength:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  maxRange: 30
+  minRange: 0.05
+  environmentLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  triggerMode: 1
+  logsFolderName: LiDAR_Logs
+  usePersistentPath: 1
 --- !u!1001 &1832712758
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -33332,4 +33128,4 @@ SceneRoots:
   - {fileID: 1360863319}
   - {fileID: 394902499}
   - {fileID: 479671903}
-  - {fileID: 426605424}
+  - {fileID: 1816513573}

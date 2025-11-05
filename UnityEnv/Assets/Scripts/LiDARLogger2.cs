@@ -32,7 +32,7 @@ public class LiDARLogger2 : MonoBehaviour
 
     [Header("Output Location")]
     [Tooltip("Folder name for NEW logs. Created if missing.")]
-    public string logsFolderName = "LiDAR_Logs";
+    public string logsFolderName = "LiDAR_Logs 2";
     [Tooltip("True: use Application.persistentDataPath (recommended). False: use Assets.")]
     public bool usePersistentPath = true;
 

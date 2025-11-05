@@ -32,7 +32,7 @@ public class DroneAgent : Agent
     public float maxEpisodeTime = 90f;
 
     // COLLISION PENALTY HANDLING
-        [Header("Collision Penalties")]
+    [Header("Collision Penalties")]
     [Tooltip("Base penalty when touching an obstacle (applied once per cooldown).")]
     public float collisionPenalty = -0.2f;
 
@@ -53,15 +53,26 @@ public class DroneAgent : Agent
     private float lastCollisionPenaltyTime = -999f;
     private float bestDist; private float noImproveTimer; // Related, do not uncouple
     // END
+
+    // performance tracking
+    private int collisionsThisEpisode = 0;
+    private bool successThisEpisode = false;
+    private StatsRecorder stats;
+
     // TODO: thought this was necessary dirver code but it has 0 references. Is it necessary? Correct?
     void Awake()
     {
         if (!rb) rb = GetComponent<Rigidbody>();
         if (!autopilot) autopilot = GetComponent<DroneAutopilot>();
+        stats = Academy.Instance.StatsRecorder;
     }
 
     public override void OnEpisodeBegin()
     {
+        // Reset metrics
+        collisionsThisEpisode = 0;
+        successThisEpisode = false;
+
         // Reset physics
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
@@ -135,14 +146,14 @@ public class DroneAgent : Agent
     {
         // Saftey check, is the script configured correctly in unity?
         var act = actions.ContinuousActions;
-        #if UNITY_EDITOR
-        if (act.Length != 3)
-        {
-            Debug.LogError($"Expected 3 continuous actions but got {act.Length}. " +
-                        "Check Behavior Parameters > Actions (Continuous=3, Discrete=0).");
-            return;
-        }
-        #endif
+        // #if UNITY_EDITOR
+        // if (act.Length != 3)
+        // {
+        //     Debug.LogError($"Expected 3 continuous actions but got {act.Length}. " +
+        //                 "Check Behavior Parameters > Actions (Continuous=3, Discrete=0).");
+        //     return;
+        // }
+        // #endif
 
         // Create 3 actions which the agent can use to control the drone: tiltx, tilty, and climb
         float roll = Mathf.Clamp(act[0], -1f, 1f);
@@ -162,7 +173,7 @@ public class DroneAgent : Agent
         float dist = Vector3.Distance(transform.position, goal.position);
         if (dist + 0.1f < bestDist) { bestDist = dist; noImproveTimer = 0f; }
         else noImproveTimer += Time.fixedDeltaTime;
-        if (noImproveTimer > 5f) { AddReward(-1f); EndEpisode(); return; } // Early stopping condition for no improvement, TODO: overly penalizing?
+        if (noImproveTimer > 5f) { AddReward(-1f); RecordStats(); EndEpisode(); return; } // Early stopping condition for no improvement, TODO: overly penalizing?
         // Always:
         AddReward(0.2f * (prevDist - dist));   // + if closer, - if farther
         prevDist = dist;
@@ -176,6 +187,8 @@ public class DroneAgent : Agent
         if (dist < successRadius && rb.linearVelocity.magnitude < 0.5f && tilt < 10f)
         {
             AddReward(+50.0f);
+            successThisEpisode = true;
+            RecordStats();
             EndEpisode();
         }
         // END
@@ -190,8 +203,9 @@ public class DroneAgent : Agent
             if (endEpisodeOnCrash && (queuedCollisionSpeed >= hardCrashSpeed))
             {
                 AddReward(-1.0f); // fatal crash has extra penalty
+                RecordStats();
                 EndEpisode();
-                return;
+                // return;
             }
 
             // Consume event and start cooldown
@@ -204,10 +218,69 @@ public class DroneAgent : Agent
         if (tilt > maxTiltDeg || timer > maxEpisodeTime)
         {
             AddReward(-1.0f);
+            RecordStats();
             EndEpisode();   // failure reached, should end episode
         }
         
-    }   
+    }  
+
+//     // ADDED: Hooks for DroneCollision.cs
+//     // Called when a collision is detected by DroneCollision.cs
+//     public void RegisterCrash(float impactSpeed = 0f)
+//     {
+//         // Queue the impact for processing inside OnActionReceived()
+//         collisionQueued = true;
+//         queuedCollisionSpeed = Mathf.Max(queuedCollisionSpeed, impactSpeed);
+
+//         // Optional: small immediate penalty for realism
+//         AddReward(collisionPenalty * 0.5f);
+
+// #if UNITY_EDITOR
+//         Debug.Log($"DroneAgent registered crash (impact {impactSpeed:F2})");
+// #endif
+//     }
+
+//     // Called when the drone enters a goal trigger
+//     public void RegisterSuccess()
+//     {
+//         AddReward(+50.0f);
+//         EndEpisode();
+
+// #if UNITY_EDITOR
+//         Debug.Log("DroneAgent registered success — goal reached!");
+// #endif
+//     } 
+
+    // Hooks for DroneCollision.cs
+    public void RegisterCrash(float impactSpeed = 0f)
+    {
+        collisionQueued = true;
+        queuedCollisionSpeed = Mathf.Max(queuedCollisionSpeed, impactSpeed);
+        collisionsThisEpisode++;
+
+        // log metric to TensorBoard
+        // SetCustomMetric("Collisions", collisionsThisEpisode);
+    }
+
+    public void RegisterSuccess()
+    {
+        successThisEpisode = true;
+        AddReward(+50.0f);
+
+        // log metric to TensorBoard
+        // SetCustomMetric("Success", 1f);
+        RecordStats();
+
+        EndEpisode();
+    }
+
+    // Record performance metrics for TensorBoard
+    private void RecordStats()
+    {
+        stats.Add("Episode/Collisions", collisionsThisEpisode);
+        stats.Add("Episode/Success", successThisEpisode ? 1 : 0);
+        stats.Add("Episode/TotalReward", GetCumulativeReward());
+    }
 
     // ADDED FOR PORCH NAVIGATION
     // visualize porch waypoints in editor
@@ -222,6 +295,5 @@ public class DroneAgent : Agent
         }
     }
     // END ADDED FOR PORCH NAVIGATION
-
         
 }

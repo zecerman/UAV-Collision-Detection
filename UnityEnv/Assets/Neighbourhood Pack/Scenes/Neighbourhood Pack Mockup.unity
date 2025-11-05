@@ -5955,20 +5955,68 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -8383124558419344257, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Motor_06
+      objectReference: {fileID: 0}
+    - target: {fileID: -8380157826906577798, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Motor_03
+      objectReference: {fileID: 0}
+    - target: {fileID: -6733177361254619370, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Motor_01
+      objectReference: {fileID: 0}
     - target: {fileID: -5568371526223589888, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
       propertyPath: m_Name
       value: Front Sensor
+      objectReference: {fileID: 0}
+    - target: {fileID: -5546747315237514756, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Top Wing
+      objectReference: {fileID: 0}
+    - target: {fileID: -5063223942988036812, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Bottom Wing
+      objectReference: {fileID: 0}
+    - target: {fileID: -4636300777304409883, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Drone Body
+      objectReference: {fileID: 0}
+    - target: {fileID: -3798597711559607027, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Motor_05
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
       propertyPath: m_Name
       value: Drone3_unattached
       objectReference: {fileID: 0}
+    - target: {fileID: 2800250516343163423, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Motor_04
+      objectReference: {fileID: 0}
     - target: {fileID: 7833249854982934595, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
       propertyPath: m_Name
       value: Back Sensor
       objectReference: {fileID: 0}
+    - target: {fileID: 8513859187771203891, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Support Beams
+      objectReference: {fileID: 0}
+    - target: {fileID: 8700725330082129686, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+      propertyPath: m_Name
+      value: Motor_02
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 3849762623622064168, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+    - {fileID: 6512510688612296998, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+    - {fileID: 6919683763462532184, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+    - {fileID: 5245042011116262203, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+    - {fileID: -2914413575082383075, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+    - {fileID: -6577237425059042219, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+    - {fileID: 4214726985332892257, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
+    - {fileID: 2971542036940430761, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 326e5df99084b85429ef4721c34419cb, type: 3}
@@ -6064,9 +6112,9 @@ MonoBehaviour:
   drawBeams: 1
   lineMaterial: {fileID: 0}
   lineWidth: 0.05
-  missColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
+  missColor: {r: 0.9924528, g: 0, b: 0, a: 1}
   hitColor: {r: 0, g: 1, b: 0, a: 1}
-  maxRange: 30
+  maxRange: 10
   minRange: 0.05
 --- !u!114 &426605430
 MonoBehaviour:
@@ -6092,9 +6140,9 @@ MonoBehaviour:
   drawBeams: 1
   lineMaterial: {fileID: 0}
   lineWidth: 0.05
-  missColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
+  missColor: {r: 1, g: 0.1838857, b: 0, a: 1}
   hitColor: {r: 0, g: 1, b: 0, a: 1}
-  maxRange: 30
+  maxRange: 10
   minRange: 0.05
 --- !u!114 &426605431
 MonoBehaviour:

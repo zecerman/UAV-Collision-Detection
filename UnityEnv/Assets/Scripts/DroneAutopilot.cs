@@ -26,7 +26,7 @@ public class DroneAutopilot : MonoBehaviour
 
 
     public Rigidbody rb;
-    public Rotor[] rotors = new Rotor[4];
+    public Rotor[] rotors = new Rotor[6];
 
     [Header("Altitude PID (outputs Newtons total)")]
     public float kp = 40f;        // proportional 

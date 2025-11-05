@@ -98,5 +98,6 @@ InitTestScene*.unity*
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
-# Content in results folder is too large to push
+# Content in these folders are too large to push
 /results/
+/Assets/LiDAR_Logs/

@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
@@ -7,9 +8,41 @@ using Unity.MLAgents.Sensors;
 public class DroneAgent : Agent
 {
     // ADDED FOR PORCH NAVIGATION
-    [Header("Porch Waypoints")]
-    public Transform[] porchWaypoints;  // Assign these manually in Unity
+    [Header("Porch Waypoints (auto)")]
+    [SerializeField] private Transform waypointsParent;   // Drag "Waypoints_porches" here
+    [SerializeField] private Transform[] porchWaypoints;  // Auto-populated from children
     private int currentPorchIndex = 0;
+
+    // Auto-populate in Editor and at runtime
+    private void OnValidate()
+    {
+        // If not set, try to find by common name to reduce setup friction
+        if (waypointsParent == null)
+        {
+            var go = GameObject.Find("Waypoints_porches");
+            if (go) waypointsParent = go.transform;
+        }
+        AutoFillWaypoints();
+    }
+
+    private void AutoFillWaypoints()
+    {
+        if (!waypointsParent) return;
+
+        // Get all direct/indirect children (excluding the parent), keep inactive too.
+        porchWaypoints = waypointsParent
+            .GetComponentsInChildren<Transform>(includeInactive: true)
+            .Where(t => t != waypointsParent)
+            .OrderBy(t => t.name) // predictable ordering: porch_01, porch_02, ...
+            .ToArray();
+    }
+
+    // Optional: call this at runtime if you spawn agent via prefab and wire things up in code.
+    public void SetWaypointsParent(Transform parent)
+    {
+        waypointsParent = parent;
+        AutoFillWaypoints();
+    }
     // END ADDED FOR PORCH NAVIGATION
 
     // GLOBALS
@@ -69,7 +102,7 @@ public class DroneAgent : Agent
         // Recall previous distance to goal (consumed by reward calculation)
         prevDist = Vector3.Distance(transform.position, goal.position);
         bestDist = prevDist; noImproveTimer = 0f;
-        
+
         // Randomize start
         Vector3 startPos = new Vector3(
             Random.Range(-startArea.x, startArea.x),
@@ -77,7 +110,8 @@ public class DroneAgent : Agent
             Random.Range(-startArea.z, startArea.z)
         );
         transform.position = startPos;
-        transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+        // Set random yaw, begin with upright rotation
+        transform.rotation = Quaternion.Euler(90f, Random.Range(0f, 360f), 0f);
 
         // ADDED FOR PORCH NAVIGATION (randomized goal)
         // Choose the next porch waypoint as the goal

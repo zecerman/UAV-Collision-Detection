@@ -146,14 +146,6 @@ public class DroneAgent : Agent
     {
         // Saftey check, is the script configured correctly in unity?
         var act = actions.ContinuousActions;
-        // #if UNITY_EDITOR
-        // if (act.Length != 3)
-        // {
-        //     Debug.LogError($"Expected 3 continuous actions but got {act.Length}. " +
-        //                 "Check Behavior Parameters > Actions (Continuous=3, Discrete=0).");
-        //     return;
-        // }
-        // #endif
 
         // Create 3 actions which the agent can use to control the drone: tiltx, tilty, and climb
         float roll = Mathf.Clamp(act[0], -1f, 1f);
@@ -224,51 +216,18 @@ public class DroneAgent : Agent
         
     }  
 
-//     // ADDED: Hooks for DroneCollision.cs
-//     // Called when a collision is detected by DroneCollision.cs
-//     public void RegisterCrash(float impactSpeed = 0f)
-//     {
-//         // Queue the impact for processing inside OnActionReceived()
-//         collisionQueued = true;
-//         queuedCollisionSpeed = Mathf.Max(queuedCollisionSpeed, impactSpeed);
-
-//         // Optional: small immediate penalty for realism
-//         AddReward(collisionPenalty * 0.5f);
-
-// #if UNITY_EDITOR
-//         Debug.Log($"DroneAgent registered crash (impact {impactSpeed:F2})");
-// #endif
-//     }
-
-//     // Called when the drone enters a goal trigger
-//     public void RegisterSuccess()
-//     {
-//         AddReward(+50.0f);
-//         EndEpisode();
-
-// #if UNITY_EDITOR
-//         Debug.Log("DroneAgent registered success — goal reached!");
-// #endif
-//     } 
-
     // Hooks for DroneCollision.cs
     public void RegisterCrash(float impactSpeed = 0f)
     {
         collisionQueued = true;
         queuedCollisionSpeed = Mathf.Max(queuedCollisionSpeed, impactSpeed);
         collisionsThisEpisode++;
-
-        // log metric to TensorBoard
-        // SetCustomMetric("Collisions", collisionsThisEpisode);
     }
 
     public void RegisterSuccess()
     {
         successThisEpisode = true;
         AddReward(+50.0f);
-
-        // log metric to TensorBoard
-        // SetCustomMetric("Success", 1f);
         RecordStats();
 
         EndEpisode();

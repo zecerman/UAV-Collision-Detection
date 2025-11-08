@@ -101,6 +101,7 @@ public class DroneAgent : Agent
     {
         if (!rb) rb = GetComponent<Rigidbody>();
         if (!autopilot) autopilot = GetComponent<DroneAutopilot>();
+        if (!lidarLogger) lidarLogger = GetComponentInParent<LiDARLogger>();
         stats = Academy.Instance.StatsRecorder;
     }
 
@@ -156,9 +157,15 @@ public class DroneAgent : Agent
         autopilot.climbCmd = 0f;                            // Clear climb
         timer = 0f;                                         // Reset timer
     }
-
+    bool printed;
     public override void CollectObservations(VectorSensor sensor)
     {
+        // One time debug print to ensure correct observation size, etc...
+        if (!printed){
+        int len = lidarLogger && lidarLogger.latestRow != null ? lidarLogger.latestRow.Length : 0;
+        Debug.Log($"latestRow len={len}, total obs will be {len}+13");
+        printed = true;
+    }
         // --- MAIN OBSERVATIONS (last LiDAR row) ---
         if (lidarLogger != null && lidarLogger.latestRow != null)
         {
@@ -194,7 +201,13 @@ public class DroneAgent : Agent
     public override void OnActionReceived(ActionBuffers actions)
     {
         // Saftey check, is the script configured correctly in unity?
-        var act = actions.ContinuousActions;
+        var act = actions.ContinuousActions;     
+        if (act.Length != 3)
+        {
+            Debug.LogError($"Expected 3 continuous actions, got {act.Length}. " +
+                            "Check Behavior Parameters: Continuous Actions should be 3, Discrete 0, and Model empty during training.");
+            return;
+        }
 
         // Create 3 actions which the agent can use to control the drone: tiltx, tilty, and climb
         float roll = Mathf.Clamp(act[0], -1f, 1f);

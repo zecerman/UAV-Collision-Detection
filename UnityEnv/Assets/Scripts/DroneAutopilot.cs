@@ -69,7 +69,8 @@ public class DroneAutopilot : MonoBehaviour
 
     void Start()
     {
-        rb.centerOfMass += new Vector3(0f, -0.05f, 0f); // TODO: THIS IS A PLACEHOLDER ADJUSTMENT TO MANUALLY ADJUST CENTER OF MASS DOWN 
+        rb = GetComponent<Rigidbody>();
+        rb.centerOfMass += new Vector3(0f, -0.5f, 0f); // TODO: Verify truth of this adjustment
         // Capture current altitude at start
         targetY = rb.position.y;
         prevY = rb.position.y;

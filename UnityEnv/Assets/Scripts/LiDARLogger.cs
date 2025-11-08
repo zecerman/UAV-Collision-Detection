@@ -14,12 +14,13 @@ public class LiDARLogger : MonoBehaviour
     public float scanInterval = 0.5f;
 
     [Header("Output")]
+    public float[] latestRow; // Exposed to DroneAgent
     public string outputFileBase = "LiDAR_Scan";
     private string _sessionPath;
     private StreamWriter _writer;
 
     [Header("Motors")]
-    [Range(1, 6)] public int motorCount = 4;
+    public int motorCount = 6;
     public float[] motorStrength = new float[6];
 
     [Header("Shared Ray Params")]
@@ -34,7 +35,7 @@ public class LiDARLogger : MonoBehaviour
     float _prevTimestamp = -1f;
     Vector3 _prevPos, _prevVel;
     bool _first = true;
-    private const int _perBeamCols = 7;   // x,y,z,dist,azim,elev,hit
+    private const int _perBeamCols = 1;   // x,y,z,dist,azim,elev,hit
     private bool _headerWritten = false;
     private int  _headerBeamTotal = -1;   // how many beams the current header was made for
 
@@ -110,13 +111,13 @@ public class LiDARLogger : MonoBehaviour
         for (int i = 0; i < totalBeams; i++)
         {
             int k = i + 1;
-            H.Add($"beam{k}.x(m)");
-            H.Add($"beam{k}.y(m)");
-            H.Add($"beam{k}.z(m)");
-            H.Add($"beam{k}.dist(m)");
-            H.Add($"beam{k}.azim(deg)");
-            H.Add($"beam{k}.elev(deg)");
-            H.Add($"beam{k}.hit(0/1)");
+            //H.Add($"beam{k}.x(m)");
+            //H.Add($"beam{k}.y(m)");
+            //H.Add($"beam{k}.z(m)");
+            H.Add($"beam{k}.dist(m)"); // ONLY distance is relevant for training, the others are used for debugging/visualization
+            //H.Add($"beam{k}.azim(deg)");
+            //H.Add($"beam{k}.elev(deg)");
+            //H.Add($"beam{k}.hit(0/1)");
         }
 
         _writer.WriteLine(string.Join(",", H));
@@ -182,6 +183,16 @@ public class LiDARLogger : MonoBehaviour
         for (int m = 0; m < motorCount; m++)
             row.Add((m < motorStrength.Length ? motorStrength[m] : 0f).ToString("F3", inv));
 
+        var frow = new List<float>(10 + motorCount + beamsNow * _perBeamCols);
+        frow.Add(t);
+        frow.Add(yaw);  frow.Add(pitch);  frow.Add(roll);
+        frow.Add(vel.x); frow.Add(vel.y); frow.Add(vel.z);
+        frow.Add(acc.x); frow.Add(acc.y); frow.Add(acc.z);
+        for (int m = 0; m < motorCount; m++)
+        {
+            frow.Add(m < motorStrength.Length ? motorStrength[m] : 0f);
+        }
+
         // 4) Append beams we actually scanned
         if (rTop != null) AppendBeams(row, rTop, inv);
         if (rBot != null) AppendBeams(row, rBot, inv);
@@ -196,6 +207,9 @@ public class LiDARLogger : MonoBehaviour
         _writer.WriteLine(string.Join(",", row));
         _writer.Flush();
 
+        // 7) Update latestRow for external access
+        latestRow = frow.ToArray();
+
         _first = false;
         _prevTimestamp = t;
         _prevPos = dronePos;
@@ -208,13 +222,13 @@ public class LiDARLogger : MonoBehaviour
     for (int i = 0; i < results.Count; i++)
     {
         var r = results[i];
-        row.Add(r.x.ToString("F4", inv));
-        row.Add(r.y.ToString("F4", inv));
-        row.Add(r.z.ToString("F4", inv));
-        row.Add(r.dist.ToString("F4", inv));
-        row.Add(r.az.ToString("F1", inv));
-        row.Add(r.el.ToString("F1", inv));
-        row.Add(r.hit != 0 ? "1" : "0");
+        //row.Add(r.x.ToString("F4", inv));
+        //row.Add(r.y.ToString("F4", inv));
+        //row.Add(r.z.ToString("F4", inv));
+        row.Add(r.dist.ToString("F4", inv)); // ONLY distance is relevant for training, the others are used for debugging/visualization
+        //row.Add(r.az.ToString("F1", inv));
+        //row.Add(r.el.ToString("F1", inv));
+        //row.Add(r.hit != 0 ? "1" : "0");
     }
     }
 }

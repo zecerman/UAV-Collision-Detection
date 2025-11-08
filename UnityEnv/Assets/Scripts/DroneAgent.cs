@@ -51,7 +51,11 @@ public class DroneAgent : Agent
     public Rigidbody rb;
     private float prevDist;
     float timer;
+
     // END
+    [Header("LiDAR Input")]
+    public LiDARLogger lidarLogger;
+    private float[] lidarVec;
 
     [Header("Episode Bounds")]
     public Vector3 startArea = new Vector3(5, 2, 5); // TODO: hard coded positions are a placeholder solution
@@ -155,6 +159,19 @@ public class DroneAgent : Agent
 
     public override void CollectObservations(VectorSensor sensor)
     {
+        // --- MAIN OBSERVATIONS (last LiDAR row) ---
+        if (lidarLogger != null && lidarLogger.latestRow != null)
+        {
+            lidarVec = lidarLogger.latestRow;
+            for (int i = 0; i < lidarVec.Length; i++)
+                sensor.AddObservation(lidarVec[i]);
+        }
+        else
+        {
+            Debug.LogWarning("LiDAR logger not assigned or no data available");
+        }
+
+        // --- EXTRA OBSERVATIONS ---
         // Relative goal in drone local frame
         Vector3 rel = transform.InverseTransformPoint(goal.position);
         sensor.AddObservation(rel);                 // 3
@@ -171,8 +188,6 @@ public class DroneAgent : Agent
 
         Vector3 upLocal = transform.InverseTransformDirection(transform.up);
         sensor.AddObservation(upLocal);             // 3 (tilt info)
-
-        // Total = 13 floats (compact for now, will become more problematic when LiDAR is used)
     }
 
     // 3 continuous actions: roll, pitch, climb

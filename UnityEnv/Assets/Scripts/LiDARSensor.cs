@@ -6,15 +6,12 @@ public class LiDARSensor : MonoBehaviour
 {
     public enum Hemisphere { Top, Bottom }
 
-    [Header("Sensor Setup")]
-    public Hemisphere hemisphere = Hemisphere.Top;
-
     [Tooltip("Reference to the DRONE root (the one that holds the logger).")]
     public Transform droneRoot;
 
     [Header("Coverage")]
-    [Range(5, 60)] public int azimuthStepDeg = 15;
-    [Range(5, 60)] public int elevationStepDeg = 15;
+    [Range(5, 60)] public int azimuthStepDeg = 30;
+    [Range(5, 60)] public int elevationStepDeg = 30;
 
     [Tooltip("Meters to start ahead of sensor to avoid self-hits.")]
     [Range(0f, 1f)] public float selfClearance = 0.25f;
@@ -27,7 +24,7 @@ public class LiDARSensor : MonoBehaviour
     public bool drawBeams = true;
     public Material lineMaterial;
     public float lineWidth = 0.05f;
-    public Color missColor = new Color(0.2f, 0.8f, 0.2f);
+    public Color missColor = new Color(1f, 0.0f, 0.0f);
     public Color hitColor  = new Color(0.0f, 1f, 0.0f);
 
     [Header("Ranges")]
@@ -73,18 +70,9 @@ public class LiDARSensor : MonoBehaviour
         int azStep = Mathf.Max(1, azimuthStepDeg);
         int elStep = Mathf.Max(1, elevationStepDeg);
 
-        if (hemisphere == Hemisphere.Top)
-        {
-            for (int az = 0; az < 360; az += azStep)
-                for (int el = elStep; el <= 90; el += elStep)
-                    AddBeam(az, +el);
-        }
-        else
-        {
-            for (int az = 0; az < 360; az += azStep)
-                for (int el = -elStep; el >= -90; el -= elStep)
-                    AddBeam(az, el);
-        }
+        for (int az = 0; az < 360; az += Mathf.Max(1, azimuthStepDeg))
+            for (int el = 0; el <= 90; el += Mathf.Max(1, elevationStepDeg))
+                AddBeam(az, el);
 
         if (drawBeams)
         {
@@ -96,9 +84,11 @@ public class LiDARSensor : MonoBehaviour
                 if (lineMaterial != null) lr.material = lineMaterial;
                 else
                 {
-                    var sh = Shader.Find("Unlit/Color");
-                    lr.material = new Material(sh ? sh : Shader.Find("Sprites/Default"));
-                    if (sh) lr.material.SetColor("_Color", Color.green);
+                    // Use a shader that respects vertex colors from the LineRenderer
+                    var sh = Shader.Find("Sprites/Default") 
+                            ?? Shader.Find("Universal Render Pipeline/Unlit");
+                    lr.material = new Material(sh);
+                    lr.material.color = Color.white;   // don't tint; let start/endColor drive the color
                 }
                 lr.positionCount = 2;
                 lr.useWorldSpace = true;
@@ -110,7 +100,7 @@ public class LiDARSensor : MonoBehaviour
             }
         }
 
-        Debug.Log($"{name}: built {_beams.Count} beams for {hemisphere} hemisphere");
+        Debug.Log($"{name}: built {_beams.Count} beams");
     }
 
     void AddBeam(float az, float el) => _beams.Add(new BeamDef { az = az, el = el, lr = null });
@@ -130,9 +120,24 @@ public class LiDARSensor : MonoBehaviour
         {
             var b = _beams[i];
 
-            // Direction in DRONE frame (consistent for top/bottom)
-            Quaternion q = Quaternion.Euler(b.el, b.az, 0f);
-            Vector3 dirWorld = droneRot * (q * Vector3.forward);
+            // Use the sensor's *parent* as the reference frame for the sweep axes (NOT ABSOLUTE WORLD AXIS)
+            Transform basis = transform;
+
+            // Axis of the cone = parent's up
+            Vector3 u = basis.up.normalized;
+
+            // Orthonormal frame around u (e1,e2 lie in the plane perpendicular to u)
+            Vector3 e1 = Vector3.ProjectOnPlane(basis.forward, u);
+            if (e1.sqrMagnitude < 1e-6f) e1 = Vector3.ProjectOnPlane(basis.right, u);
+            e1.Normalize();
+            Vector3 e2 = Vector3.Cross(u, e1);
+
+            float theta = Mathf.Deg2Rad * Mathf.Clamp(Mathf.Abs(b.el), 0f, 90f);
+            float phi   = Mathf.Deg2Rad * b.az;
+
+            Vector3 dirWorld =
+                Mathf.Cos(theta) * u +
+                Mathf.Sin(theta) * (Mathf.Cos(phi) * e1 + Mathf.Sin(phi) * e2);
             dirWorld.Normalize();
 
             Vector3 start = transform.position + dirWorld * selfClearance;

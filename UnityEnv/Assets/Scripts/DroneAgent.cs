@@ -51,7 +51,11 @@ public class DroneAgent : Agent
     public Rigidbody rb;
     private float prevDist;
     float timer;
+
     // END
+    [Header("LiDAR Input")]
+    public LiDARLogger lidarLogger;
+    private float[] lidarVec;
 
     [Header("Episode Bounds")]
     public Vector3 startArea = new Vector3(5, 2, 5); // TODO: hard coded positions are a placeholder solution
@@ -97,6 +101,7 @@ public class DroneAgent : Agent
     {
         if (!rb) rb = GetComponent<Rigidbody>();
         if (!autopilot) autopilot = GetComponent<DroneAutopilot>();
+        if (!lidarLogger) lidarLogger = GetComponentInParent<LiDARLogger>();
         stats = Academy.Instance.StatsRecorder;
     }
 
@@ -152,9 +157,28 @@ public class DroneAgent : Agent
         autopilot.climbCmd = 0f;                            // Clear climb
         timer = 0f;                                         // Reset timer
     }
-
+    bool printed;
     public override void CollectObservations(VectorSensor sensor)
     {
+        // One time debug print to ensure correct observation size, etc...
+        if (!printed){
+        int len = lidarLogger && lidarLogger.latestRow != null ? lidarLogger.latestRow.Length : 0;
+        Debug.Log($"latestRow len={len}, total obs will be {len}+13");
+        printed = true;
+    }
+        // --- MAIN OBSERVATIONS (last LiDAR row) ---
+        if (lidarLogger != null && lidarLogger.latestRow != null)
+        {
+            lidarVec = lidarLogger.latestRow;
+            for (int i = 0; i < lidarVec.Length; i++)
+                sensor.AddObservation(lidarVec[i]);
+        }
+        else
+        {
+            Debug.LogWarning("LiDAR logger not assigned or no data available");
+        }
+
+        // --- EXTRA OBSERVATIONS ---
         // Relative goal in drone local frame
         Vector3 rel = transform.InverseTransformPoint(goal.position);
         sensor.AddObservation(rel);                 // 3
@@ -171,15 +195,19 @@ public class DroneAgent : Agent
 
         Vector3 upLocal = transform.InverseTransformDirection(transform.up);
         sensor.AddObservation(upLocal);             // 3 (tilt info)
-
-        // Total = 13 floats (compact for now, will become more problematic when LiDAR is used)
     }
 
     // 3 continuous actions: roll, pitch, climb
     public override void OnActionReceived(ActionBuffers actions)
     {
         // Saftey check, is the script configured correctly in unity?
-        var act = actions.ContinuousActions;
+        var act = actions.ContinuousActions;     
+        if (act.Length != 3)
+        {
+            Debug.LogError($"Expected 3 continuous actions, got {act.Length}. " +
+                            "Check Behavior Parameters: Continuous Actions should be 3, Discrete 0, and Model empty during training.");
+            return;
+        }
 
         // Create 3 actions which the agent can use to control the drone: tiltx, tilty, and climb
         float roll = Mathf.Clamp(act[0], -1f, 1f);

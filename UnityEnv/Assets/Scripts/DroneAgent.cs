@@ -7,6 +7,9 @@ using Unity.MLAgents.Sensors;
 [RequireComponent(typeof(Rigidbody))]
 public class DroneAgent : Agent
 {
+    // --- End reasons for logging ---
+    enum EndReason { Success, NoImprove, HardCrash, Tilt, Timeout }
+
     // ADDED FOR PORCH NAVIGATION
     [Header("Porch Waypoints (auto)")]
     [SerializeField] private Transform waypointsParent;   // Drag "Waypoints_porches" here
@@ -56,6 +59,7 @@ public class DroneAgent : Agent
     [Header("LiDAR Input")]
     public LiDARLogger lidarLogger;
     private float[] lidarVec;
+    public float lidarEps = 1e-3f; // Used for LiDAR observation normalization (avoid div0)
 
     [Header("Episode Bounds")]
     public Vector3 startArea = new Vector3(5, 2, 5); // TODO: hard coded positions are a placeholder solution
@@ -64,9 +68,19 @@ public class DroneAgent : Agent
     public float maxStartY = 6f;
 
     [Header("Success / Safety")]
-    public float successRadius = 1.0f;
+    public float successRadius = 3.0f;
     public float maxTiltDeg = 45f; // TODO: TOO FAR?
     public float maxEpisodeTime = 90f;
+    // AGENT SMOTHING PARAMETERS
+    [Header("Action shaping/Agent smoothing")]
+    public float rpScale = 0.3f;           // roll/pitch scale (≤ 0.5 to start)
+    public float climbScale = 0.5f;        // climb scale (m/s at action=1)
+    public float actionSlewPerSec = 2.0f;  // how fast actions can change
+    public float warmupSeconds = 1.0f;     // zero actions at episode start
+    // END 
+    // smoothed actions (state)
+    float smRoll, smPitch, smClimb;
+    float episodeT;
 
     // COLLISION PENALTY HANDLING
     [Header("Collision Penalties")]
@@ -127,7 +141,7 @@ public class DroneAgent : Agent
         );
         transform.position = startPos;
         // Set random yaw, begin with upright rotation
-        transform.rotation = Quaternion.Euler(90f, Random.Range(0f, 360f), 0f);
+        transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
         // ADDED FOR PORCH NAVIGATION (randomized goal)
         // Choose the next porch waypoint as the goal
@@ -147,87 +161,112 @@ public class DroneAgent : Agent
                 Random.Range(-goalArea.z, goalArea.z)
             );
             goal.position = fallbackGoal;
-}
+        }
         // END ADDED FOR PORCH NAVIGATION
-
 
         // Cleanup autopilot's internal state at beginning of episode
         autopilot.SetTargetY(transform.position.y);         // Clear targetY
         autopilot.tiltCmd = Vector2.zero;                   // Clear tilt
         autopilot.climbCmd = 0f;                            // Clear climb
         timer = 0f;                                         // Reset timer
+
+        // reset local action smoothing timer
+        episodeT = 0f;
+        smRoll = smPitch = smClimb = 0f;
     }
+
     bool printed;
     public override void CollectObservations(VectorSensor sensor)
     {
         // One time debug print to ensure correct observation size, etc...
-        if (!printed){
-        int len = lidarLogger && lidarLogger.latestRow != null ? lidarLogger.latestRow.Length : 0;
-        Debug.Log($"latestRow len={len}, total obs will be {len}+13");
-        printed = true;
-    }
+        if (!printed)
+        {
+            int len = lidarLogger && lidarLogger.latestRow != null ? lidarLogger.latestRow.Length : 0;
+            Debug.Log($"latestRow len={len}, total obs will be {len}+13");
+            printed = true;
+        }
         // --- MAIN OBSERVATIONS (last LiDAR row) ---
         if (lidarLogger != null && lidarLogger.latestRow != null)
         {
             lidarVec = lidarLogger.latestRow;
+            float invMax = 1f / Mathf.Max(lidarLogger.maxRange, lidarEps);
             for (int i = 0; i < lidarVec.Length; i++)
-                sensor.AddObservation(lidarVec[i]);
+            {
+                float d = lidarVec[i];
+                if (float.IsNaN(d) || float.IsInfinity(d)) d = lidarLogger.maxRange;   // guard
+                sensor.AddObservation(Mathf.Clamp01(d * invMax));
+            }
         }
         else
         {
-            Debug.LogWarning("LiDAR logger not assigned or no data available");
+            // Keep size consistent if missing: feed zeros
+            int n = (lidarVec != null) ? lidarVec.Length : 0;
+            for (int i = 0; i < n; i++) sensor.AddObservation(0f);
         }
 
-        // --- EXTRA OBSERVATIONS ---
-        // Relative goal in drone local frame
-        Vector3 rel = transform.InverseTransformPoint(goal.position);
-        sensor.AddObservation(rel);                 // 3
-
-        // Velocities in local frame
-        Vector3 vLocal = transform.InverseTransformDirection(rb.linearVelocity);
-        Vector3 wLocal = transform.InverseTransformDirection(rb.angularVelocity);
-        sensor.AddObservation(vLocal);              // 3
-        sensor.AddObservation(wLocal);              // 3
-
-        // Altitude error and tilt
-        float altErr = autopilot.targetY - transform.position.y;
-        sensor.AddObservation(altErr);              // 1
-
-        Vector3 upLocal = transform.InverseTransformDirection(transform.up);
-        sensor.AddObservation(upLocal);             // 3 (tilt info)
+        // EXTRA: distance + unit direction to goal (local)
+        Vector3 toGoal = goal.position - transform.position;
+        float distToGoal = toGoal.magnitude;
+        Vector3 dirLocal = transform.InverseTransformDirection(toGoal.normalized);
+        sensor.AddObservation(distToGoal);   // 1
+        sensor.AddObservation(dirLocal);     // 3
     }
 
     // 3 continuous actions: roll, pitch, climb
     public override void OnActionReceived(ActionBuffers actions)
     {
         // Saftey check, is the script configured correctly in unity?
-        var act = actions.ContinuousActions;     
+        var act = actions.ContinuousActions;
         if (act.Length != 3)
         {
             Debug.LogError($"Expected 3 continuous actions, got {act.Length}. " +
                             "Check Behavior Parameters: Continuous Actions should be 3, Discrete 0, and Model empty during training.");
             return;
         }
-
-        // Create 3 actions which the agent can use to control the drone: tiltx, tilty, and climb
-        float roll = Mathf.Clamp(act[0], -1f, 1f);
-        float pitch = Mathf.Clamp(act[1], -1f, 1f);
-        float climb = Mathf.Clamp(act[2], -1f, 1f);
-        // These ^ are the ONLY actions available to the agent
-
-        autopilot.tiltCmd = new Vector2(roll, pitch);
-        autopilot.climbCmd = climb;
-
-        // ===REWARD SECTION===
+        
         // Globals (resused by multiple rewards/penalties)
         float tilt = Vector3.Angle(transform.up, Vector3.up);
         timer += Time.fixedDeltaTime;
+        episodeT += Time.fixedDeltaTime; // TODO why two timers agian?
+
+        // Create 3 actions which the agent can use to control the drone: tiltx, tilty, and climb
+        float targetRoll  = Mathf.Clamp(act[0], -1f, 1f) * rpScale;
+        float targetPitch = Mathf.Clamp(act[1], -1f, 1f) * rpScale;
+        float targetClimb = Mathf.Clamp(act[2], -1f, 1f) * climbScale;
+        // These ^ are the ONLY actions available to the agent
+
+        // Smooth the actions to avoid jerky commands
+        float step = actionSlewPerSec * Time.fixedDeltaTime;
+        smRoll  = Mathf.MoveTowards(smRoll,  targetRoll,  step);
+        smPitch = Mathf.MoveTowards(smPitch, targetPitch, step);
+        smClimb = Mathf.MoveTowards(smClimb, targetClimb, step);
+
+        // Warm-up (let the hover settle before injecting control commands)
+        if (episodeT < warmupSeconds) { smRoll = smPitch = smClimb = 0f; }
+
+        // Feed autopilot actions 
+        autopilot.tiltCmd = new Vector2(smRoll, smPitch); // still in [-rpScale, +rpScale]
+        autopilot.climbCmd = smClimb;
+
+        // ===REWARD SECTION===
         // REWARDS
+        AddReward(-0.05f); // time penalty
+        
         // Distance reward, higher if moving towards the goal but becomes negative if moving away
         float dist = Vector3.Distance(transform.position, goal.position);
-        if (dist + 0.1f < bestDist) { bestDist = dist; noImproveTimer = 0f; }
+        if (dist + 0.5f < bestDist) { bestDist = dist; noImproveTimer = 0f; }
         else noImproveTimer += Time.fixedDeltaTime;
-        if (noImproveTimer > 5f) { AddReward(-1f); RecordStats(); EndEpisode(); return; } // Early stopping condition for no improvement, TODO: overly penalizing?
+
+        // Early stopping condition for no improvement
+        if (noImproveTimer > 40f)
+        {
+            AddReward(-5.0f);
+            RecordStats();
+            Debug.Log($"Episode end: {EndReason.NoImprove}  dist={dist:F2}");
+            EndEpisode();
+            return;
+        }
+
         // Always:
         AddReward(0.2f * (prevDist - dist));   // + if closer, - if farther
         prevDist = dist;
@@ -238,14 +277,15 @@ public class DroneAgent : Agent
         AddReward(0.02f * align);
 
         // Success condition
-        if (dist < successRadius && rb.linearVelocity.magnitude < 0.5f && tilt < 10f)
+        if (dist < successRadius)// && rb.linearVelocity.magnitude < 0.5f && tilt < 10f)
         {
             AddReward(+50.0f);
             successThisEpisode = true;
             RecordStats();
+            Debug.Log($"Episode end: {EndReason.Success}  dist={dist:F2}");
             EndEpisode();
         }
-        // END
+
         // FAILURES
         // Collision penalty handling
         if (collisionQueued && (Time.time - lastCollisionPenaltyTime) >= collisionCooldown)
@@ -258,6 +298,7 @@ public class DroneAgent : Agent
             {
                 AddReward(-1.0f); // fatal crash has extra penalty
                 RecordStats();
+                Debug.Log($"Episode end: {EndReason.HardCrash}  speed={queuedCollisionSpeed:F2}");
                 EndEpisode();
                 // return;
             }
@@ -273,9 +314,14 @@ public class DroneAgent : Agent
         {
             AddReward(-1.0f);
             RecordStats();
+
+            if (tilt > maxTiltDeg)
+                Debug.Log($"Episode end: {EndReason.Tilt}  tilt={tilt:F1}deg");
+            else
+                Debug.Log($"Episode end: {EndReason.Timeout}  t={timer:F1}s");
+
             EndEpisode();   // failure reached, should end episode
         }
-        
     }  
 
     // Hooks for DroneCollision.cs
@@ -291,7 +337,7 @@ public class DroneAgent : Agent
         successThisEpisode = true;
         AddReward(+50.0f);
         RecordStats();
-
+        Debug.Log($"Episode end: {EndReason.Success} (RegisterSuccess)");
         EndEpisode();
     }
 
@@ -316,5 +362,4 @@ public class DroneAgent : Agent
         }
     }
     // END ADDED FOR PORCH NAVIGATION
-        
 }

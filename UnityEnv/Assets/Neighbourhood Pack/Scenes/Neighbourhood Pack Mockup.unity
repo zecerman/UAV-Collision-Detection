@@ -4080,7 +4080,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
-      value: Drone_rotated
+      value: Drone_mesh
       objectReference: {fileID: 0}
     - target: {fileID: 2800250516343163423, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
@@ -4516,6 +4516,7 @@ MonoBehaviour:
   autopilot: {fileID: 324950876}
   rb: {fileID: 1446309358860096613}
   lidarLogger: {fileID: 0}
+  lidarEps: 0.001
   startArea: {x: 5, y: 2, z: 5}
   goalArea: {x: 8, y: 2, z: 8}
   minStartY: 2
@@ -4523,6 +4524,10 @@ MonoBehaviour:
   successRadius: 1
   maxTiltDeg: 45
   maxEpisodeTime: 30
+  rpScale: 0.3
+  climbScale: 0.5
+  actionSlewPerSec: 2
+  warmupSeconds: 1
   collisionPenalty: -0.2
   impactScale: -0.02
   endEpisodeOnCrash: 1
@@ -18828,9 +18833,9 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 0
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
 --- !u!4 &1424204021
 Transform:
   m_ObjectHideFlags: 0
@@ -18935,13 +18940,18 @@ MonoBehaviour:
   autopilot: {fileID: 1424204022}
   rb: {fileID: 1424204020}
   lidarLogger: {fileID: 0}
-  startArea: {x: 5, y: 2, z: 5}
+  lidarEps: 0.001
+  startArea: {x: 5, y: 10, z: 5}
   goalArea: {x: 8, y: 2, z: 8}
-  minStartY: 2
-  maxStartY: 6
+  minStartY: 10
+  maxStartY: 20
   successRadius: 1
   maxTiltDeg: 45
-  maxEpisodeTime: 5
+  maxEpisodeTime: 60
+  rpScale: 0.3
+  climbScale: 0.5
+  actionSlewPerSec: 2
+  warmupSeconds: 1
   collisionPenalty: -0.2
   impactScale: -0.02
   endEpisodeOnCrash: 1
@@ -18960,7 +18970,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 77
+    VectorObservationSize: 68
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 3
@@ -18972,7 +18982,7 @@ MonoBehaviour:
   m_Model: {fileID: 0}
   m_InferenceDevice: 0
   m_BehaviorType: 0
-  m_BehaviorName: My Behavior
+  m_BehaviorName: drone_goal
   TeamId: 0
   m_UseChildSensors: 1
   m_UseChildActuators: 1
@@ -18991,7 +19001,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LiDARLogger
   topSensor: {fileID: 267885184}
   bottomSensor: {fileID: 661008859}
-  scanInterval: 0.5
+  scanInterval: 0.05
   latestRow: []
   latestDistances: []
   motorCount: 6

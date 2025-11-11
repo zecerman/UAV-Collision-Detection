@@ -1,76 +1,66 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text;              
+using System.Reflection;        
 using UnityEngine;
 
 [DisallowMultipleComponent]
 public class LiDARLogger2 : MonoBehaviour
 {
     [Header("Sensors")]
-    public LiDARSensor2 frontSensor;  // attach the "Front Sensor" object's LiDARSensor2
-    public LiDARSensor2 backSensor;   // attach the "Back Sensor" object's LiDARSensor2
+    public LiDARSensor2 frontSensor;
+    public LiDARSensor2 backSensor;
 
     [Header("Timing")]
     public float scanInterval = 0.5f;
 
-    [Header("Output")]
-    public string outputFileBase = "LiDAR_Scan";
-    private string _sessionPath;
-    private StreamWriter _writer;
-
-    [Header("Motors")]
-    [Range(1, 6)] public int motorCount = 4;
-    public float[] motorStrength = new float[6];
-
-    [Header("Shared Ray Params")]
+    [Header("Raycast Settings")]
+    public LayerMask environmentLayers = ~0;
+    public QueryTriggerInteraction triggerMode = QueryTriggerInteraction.Ignore;
     public float maxRange = 30f;
     public float minRange = 0.05f;
 
-    [Header("Shared Raycast Settings (applied to all sensors)")]
-    public LayerMask environmentLayers = ~0;
-    public QueryTriggerInteraction triggerMode = QueryTriggerInteraction.Ignore;
-
     [Header("Output Location")]
-    [Tooltip("Folder name for NEW logs. Created if missing.")]
     public string logsFolderName = "LiDAR_Logs 2";
-    [Tooltip("True: use Application.persistentDataPath (recommended). False: use Assets.")]
     public bool usePersistentPath = true;
+
+    [Header("Miss Behavior")]
+    [Tooltip("If true, write maxRange when a ray misses; if false, write empty cell.")]
+    public bool writeMaxRangeOnMiss = true;
+
+    // -------- MOTORS --------
+    [Header("Motors")]
+    [Tooltip("Optional: if assigned, motor strengths will be pulled from this controller each scan.")]
+    public MotorController motorController;           
+
+    [Tooltip("Fallback values if no controller is assigned (index 0..5).")]
+    public float[] fallbackMotorStrength = new float[6];
+
+    private readonly float[] _mBuf = new float[6];    // internal copy (always 6)
+
+    // ---- internals ----
+    private string _csvPath;
+    private StreamWriter _writer;
+    private float _nextScanTime;
+
+    // cached header data
+    private bool _headerWritten = false;
+    private int  _beamCount = -1;
+    private readonly List<float> _headerElev = new(); // degrees
+    private readonly List<float> _headerAzim = new(); // degrees
 
     string GetLogsRoot()
     {
         var root = usePersistentPath ? Application.persistentDataPath : Application.dataPath;
         var full = Path.Combine(root, logsFolderName);
-        Directory.CreateDirectory(full); // ensures folder exists
+        Directory.CreateDirectory(full);
         return full;
-    }
-
-    string StartNewSessionFile()
-    {
-        var dir = GetLogsRoot();
-        _sessionPath = Path.Combine(dir, $"{outputFileBase}_{System.DateTime.Now:yyyyMMdd_HHmmss}.csv");
-        var fs = new FileStream(_sessionPath, FileMode.Create, FileAccess.Write, FileShare.Read);
-        _writer = new StreamWriter(fs);
-        return _sessionPath;
-    }
-
-    float _nextScanTime;
-    float _prevTimestamp = -1f;
-    Vector3 _prevPos, _prevVel;
-    bool _first = true;
-
-    private const int _perBeamCols = 7;   // x,y,z,dist,azim,elev,hit
-    private bool _headerWritten = false;
-    private int  _headerBeamTotal = -1;
-
-    void Awake()
-    {
-        if (motorStrength == null || motorStrength.Length < 6)
-            motorStrength = new float[6];
     }
 
     void Start()
     {
-        // Auto-find by exact names if not assigned in the Inspector.
+        // optional auto-find
         if (!frontSensor)
         {
             var f = GameObject.Find("Front Sensor");
@@ -82,11 +72,7 @@ public class LiDARLogger2 : MonoBehaviour
             if (b) backSensor = b.GetComponent<LiDARSensor2>();
         }
 
-        // Ensure both sensors know the drone root (this object)
-        if (frontSensor && !frontSensor.droneRoot) frontSensor.droneRoot = transform;
-        if (backSensor  && !backSensor.droneRoot)  backSensor.droneRoot  = transform;
-
-        // Apply shared physics parameters to both sensors (keeps behavior in sync)
+        // sync common settings
         if (frontSensor)
         {
             frontSensor.hitLayers = environmentLayers;
@@ -102,11 +88,33 @@ public class LiDARLogger2 : MonoBehaviour
             backSensor.minRange = minRange;
         }
 
-        StartNewSessionFile();
-
-        _prevPos = transform.position;
-        _prevVel = Vector3.zero;
+        StartNewCsv();
         _nextScanTime = Time.time;
+    }
+
+    void OnDestroy() { CloseWriter(); }
+    void OnApplicationQuit() { CloseWriter(); }
+
+    void CloseWriter()
+    {
+        if (_writer != null) { _writer.Flush(); _writer.Dispose(); _writer = null; }
+    #if UNITY_EDITOR
+        UnityEditor.AssetDatabase.Refresh();
+    #endif
+    }
+
+    void StartNewCsv()
+    {
+        CloseWriter();
+        string dir = GetLogsRoot();
+        _csvPath = Path.Combine(dir, $"LiDAR_Scan_{System.DateTime.Now:yyyyMMdd_HHmmss}.csv");
+        var fs = new FileStream(_csvPath, FileMode.Create, FileAccess.Write, FileShare.Read);
+        _writer = new StreamWriter(fs, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true)); // UTF-8 BOM
+        _headerWritten = false;
+        _beamCount = -1;
+        _headerElev.Clear();
+        _headerAzim.Clear();
+        Debug.Log($"LiDAR logging to: {_csvPath}");
     }
 
     void Update()
@@ -118,134 +126,168 @@ public class LiDARLogger2 : MonoBehaviour
         }
     }
 
-    void OnApplicationQuit() { CloseWriter(); }
-    void OnDestroy()
-    {
-        CloseWriter();
-    #if UNITY_EDITOR
-        UnityEditor.AssetDatabase.Refresh();
-    #endif
-    }
-
-    void CloseWriter()
-    {
-        if (_writer != null) { _writer.Flush(); _writer.Dispose(); _writer = null; }
-    }
-
-    void WriteHeader(int totalBeams)
-    {
-        var H = new List<string>
-        {
-            "Timestamp(s)",
-            "yaw(deg)","pitch(deg)","roll(deg)",
-            "vx(m_s)","vy(m_s)","vz(m_s)",
-            "ax(m_s2)","ay(m_s2)","az(m_s2)"
-        };
-        for (int m = 1; m <= motorCount; m++) H.Add($"motor{m}.strength");
-
-        for (int i = 0; i < totalBeams; i++)
-        {
-            int k = i + 1;
-            H.Add($"beam{k}.x(m)");
-            H.Add($"beam{k}.y(m)");
-            H.Add($"beam{k}.z(m)");
-            H.Add($"beam{k}.dist(m)");
-            H.Add($"beam{k}.azim(deg)");
-            H.Add($"beam{k}.elev(deg)");
-            H.Add($"beam{k}.hit(0/1)");
-        }
-
-        _writer.WriteLine(string.Join(",", H));
-        _writer.Flush();
-        _headerWritten   = true;
-        _headerBeamTotal = totalBeams;
-
-        Debug.Log($"LiDAR header written for totalBeams={totalBeams}");
-    }
-
     void DoScanAndWrite()
     {
         var inv = CultureInfo.InvariantCulture;
 
-        // 1) SCAN FIRST so we know beam count
+        // 1) scan both sensors
         List<LiDARSensor2.BeamResult> rFront = null, rBack = null;
         if (frontSensor)
             rFront = frontSensor.ScanOnce(frontSensor.maxRange, frontSensor.minRange, frontSensor.hitLayers, frontSensor.triggerInteraction);
         if (backSensor)
             rBack  = backSensor.ScanOnce (backSensor.maxRange,  backSensor.minRange,  backSensor.hitLayers,  backSensor.triggerInteraction);
 
-        int beamsNow = (rFront?.Count ?? 0) + (rBack?.Count ?? 0);
+        // 2) combine (front first, then back) for stable indexing
+        var beams = new List<LiDARSensor2.BeamResult>((rFront?.Count ?? 0) + (rBack?.Count ?? 0));
+        if (rFront != null) beams.AddRange(rFront);
+        if (rBack  != null) beams.AddRange(rBack);
 
-        // 2) Ensure header matches
-        if (!_headerWritten || _headerBeamTotal != beamsNow)
+        int countNow = beams.Count;
+
+        // 3) (Re)build header if needed
+        if (!_headerWritten || _beamCount != countNow)
         {
-            if (_headerWritten)
+            if (_headerWritten) StartNewCsv(); // start fresh file on beam layout change
+
+            _beamCount = countNow;
+            _headerElev.Clear();
+            _headerAzim.Clear();
+
+            // collect fixed angles from this first scan
+            for (int i = 0; i < countNow; i++)
             {
-                CloseWriter();
-                StartNewSessionFile();
+                _headerElev.Add(beams[i].el);
+                _headerAzim.Add(beams[i].az);
             }
-            WriteHeader(beamsNow);
+
+            WriteHeader();
         }
 
-        // 3) Row prefix (state)
-        float t = Time.time;
-        Vector3 dronePos = transform.position;
+        // 4) write row: Timestamp, Prop1..Prop6, then beam distances
+        var row = new List<string>(1 + 6 + _beamCount) { Time.time.ToString("F3", inv) };
 
-        Vector3 e = transform.rotation.eulerAngles; // x=pitch, y=yaw, z=roll
-        float yaw = e.y, pitch = e.x, roll = e.z;
+        FillMotorBuffer();
+        for (int i = 0; i < 6; i++)
+            row.Add(_mBuf[i].ToString("F3", inv));  // <-- added missing semicolon
 
-        Vector3 vel = Vector3.zero, acc = Vector3.zero;
-        if (!_first)
+        for (int i = 0; i < _beamCount; i++)
         {
-            float dt = Mathf.Max(1e-6f, t - _prevTimestamp);
-            vel = (dronePos - _prevPos) / dt;
-            acc = (vel - _prevVel) / dt;
+            var br = beams[i];
+            if (br.hit != 0)
+                row.Add(br.dist.ToString("F4", inv));
+            else
+                row.Add(writeMaxRangeOnMiss ? maxRange.ToString("F4", inv) : ""); // blank or maxRange
         }
 
-        var row = new List<string>
-        {
-            t.ToString("F3", inv),
-            yaw.ToString("F3", inv), pitch.ToString("F3", inv), roll.ToString("F3", inv),
-            vel.x.ToString("F4", inv), vel.y.ToString("F4", inv), vel.z.ToString("F4", inv),
-            acc.x.ToString("F4", inv), acc.y.ToString("F4", inv), acc.z.ToString("F4", inv)
-        };
-
-        for (int m = 0; m < motorCount; m++)
-            row.Add((m < motorStrength.Length ? motorStrength[m] : 0f).ToString("F3", inv));
-
-        // 4) Append beams (front then back)
-        if (rFront != null) AppendBeams(row, rFront, inv);
-        if (rBack  != null) AppendBeams(row, rBack,  inv);
-
-        // 5) Check count
-        int baseCols = 10 + motorCount;
-        int expected = baseCols + beamsNow * _perBeamCols;
-        if (row.Count != expected)
-            Debug.LogError($"CSV column mismatch: have {row.Count}, expected {expected} (beamsNow={beamsNow})");
-
-        // 6) Write
         _writer.WriteLine(string.Join(",", row));
         _writer.Flush();
-
-        _first = false;
-        _prevTimestamp = t;
-        _prevPos = dronePos;
-        _prevVel = vel;
     }
 
-    static void AppendBeams(List<string> row, List<LiDARSensor2.BeamResult> results, CultureInfo inv)
+    void WriteHeader()
     {
-        for (int i = 0; i < results.Count; i++)
+        // Columns: Timestamp, Prop 1..Prop 6, then one column per beam (unchanged format)
+        var H = new List<string>(1 + 6 + _beamCount) { "Timestamp(s)" };
+        H.Add("Prop 1"); H.Add("Prop 2"); H.Add("Prop 3");
+        H.Add("Prop 4"); H.Add("Prop 5"); H.Add("Prop 6");
+
+        for (int i = 0; i < _beamCount; i++)
         {
-            var r = results[i];
-            row.Add(r.x.ToString("F4", inv));
-            row.Add(r.y.ToString("F4", inv));
-            row.Add(r.z.ToString("F4", inv));
-            row.Add(r.dist.ToString("F4", inv));
-            row.Add(r.az.ToString("F1", inv));
-            row.Add(r.el.ToString("F1", inv));
-            row.Add(r.hit != 0 ? "1" : "0");
+            int k = i + 1;
+            string label = $"beam{k} distance (elev={_headerElev[i]:F1}° | azim={_headerAzim[i]:F1}°)";
+            H.Add(label); // no commas inside so columns don’t split
         }
+
+        _writer.WriteLine(string.Join(",", H));
+        _writer.Flush();
+        _headerWritten = true;
+        Debug.Log($"Header written with 6 motor columns + {_beamCount} beam columns.");
     }
-}
+
+    // --- helpers ---
+    void FillMotorBuffer()
+    {
+        // zero default
+        for (int i = 0; i < 6; i++) _mBuf[i] = 0f;
+
+        if (motorController != null)
+        {
+            var t = motorController.GetType();
+            const BindingFlags F = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+            // 1) Method: float[] GetMotorStrengths()
+            var mi = t.GetMethod("GetMotorStrengths", F);
+            if (mi != null && mi.ReturnType == typeof(float[]) && mi.GetParameters().Length == 0)
+            {
+                var arr = (float[])mi.Invoke(motorController, null);
+                if (arr != null)
+                {
+                    for (int i = 0; i < Mathf.Min(6, arr.Length); i++) _mBuf[i] = Mathf.Clamp01(arr[i]);
+                    return;
+                }
+            }
+
+            // 2) Field/Property: float[] motorStrength
+            var fi = t.GetField("motorStrength", F);
+            if (fi != null && typeof(float[]).IsAssignableFrom(fi.FieldType))
+            {
+                var arr = (float[])fi.GetValue(motorController);
+                if (arr != null)
+                {
+                    for (int i = 0; i < Mathf.Min(6, arr.Length); i++) _mBuf[i] = Mathf.Clamp01(arr[i]);
+                    return;
+                }
+            }
+            var pi = t.GetProperty("motorStrength", F);
+            if (pi != null && typeof(float[]).IsAssignableFrom(pi.PropertyType))
+            {
+                var arr = (float[])pi.GetValue(motorController, null);
+                if (arr != null)
+                {
+                    for (int i = 0; i < Mathf.Min(6, arr.Length); i++) _mBuf[i] = Mathf.Clamp01(arr[i]);
+                    return;
+                }
+            }
+
+            // 3) Six scalars: prop1..prop6 (also try m1..m6, motor1..motor6), case-insensitive
+            string[][] nameSets =
+            {
+                new[] { "prop1","prop2","prop3","prop4","prop5","prop6" },
+                new[] { "m1","m2","m3","m4","m5","m6" },
+                new[] { "motor1","motor2","motor3","motor4","motor5","motor6" }
+            };
+
+            for (int set = 0; set < nameSets.Length; set++)
+            {
+                bool allFound = true;
+                for (int i = 0; i < 6; i++)
+                {
+                    string baseName = nameSets[set][i];
+
+                    // try field then property; case-insensitive search
+                    var f = t.GetField(baseName, F | BindingFlags.IgnoreCase);
+                    if (f != null && f.FieldType == typeof(float))
+                    {
+                        _mBuf[i] = Mathf.Clamp01((float)f.GetValue(motorController));
+                        continue;
+                    }
+                    var p = t.GetProperty(baseName, F | BindingFlags.IgnoreCase);
+                    if (p != null && p.PropertyType == typeof(float))
+                    {
+                        _mBuf[i] = Mathf.Clamp01((float)p.GetValue(motorController, null));
+                        continue;
+                    }
+
+                    allFound = false; break;
+                }
+                if (allFound) return;
+            }
+        }
+
+        // 4) Fallback array on the logger itself
+        if (fallbackMotorStrength != null)
+            for (int i = 0; i < Mathf.Min(6, fallbackMotorStrength.Length); i++)
+                _mBuf[i] = Mathf.Clamp01(fallbackMotorStrength[i]);
+    }
+} // <-- final closing brace for the class
+
 

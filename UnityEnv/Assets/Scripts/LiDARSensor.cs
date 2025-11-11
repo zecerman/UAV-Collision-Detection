@@ -36,10 +36,10 @@ public class LiDARSensor : MonoBehaviour
 
     public struct BeamResult
     {
-    public float x, y, z;   // local to DRONE
-    public float dist;      // euclidean from drone origin
-    public float az, el;    // angles in degrees
-    public int hit;         // 1/0
+        public float x, y, z;   // local to DRONE
+        public float dist;      // euclidean from drone origin
+        public float az, el;    // angles in degrees
+        public int hit;         // 1/0
     }
 
     public int BeamCount => _beams.Count;
@@ -57,10 +57,7 @@ public class LiDARSensor : MonoBehaviour
     }
 
     // Expose for logger to force a rebuild if needed
-    public void RebuildBeams()
-    {
-        BuildBeams();
-    }
+    public void RebuildBeams() => BuildBeams();
 
     void BuildBeams()
     {
@@ -70,8 +67,8 @@ public class LiDARSensor : MonoBehaviour
         int azStep = Mathf.Max(1, azimuthStepDeg);
         int elStep = Mathf.Max(1, elevationStepDeg);
 
-        for (int az = 0; az < 360; az += Mathf.Max(1, azimuthStepDeg))
-            for (int el = 0; el <= 90; el += Mathf.Max(1, elevationStepDeg))
+        for (int az = 0; az < 360; az += azStep)
+            for (int el = 0; el <= 90; el += elStep)
                 AddBeam(az, el);
 
         if (drawBeams)
@@ -84,11 +81,10 @@ public class LiDARSensor : MonoBehaviour
                 if (lineMaterial != null) lr.material = lineMaterial;
                 else
                 {
-                    // Use a shader that respects vertex colors from the LineRenderer
-                    var sh = Shader.Find("Sprites/Default") 
-                            ?? Shader.Find("Universal Render Pipeline/Unlit");
+                    var sh = Shader.Find("Sprites/Default")
+                             ?? Shader.Find("Universal Render Pipeline/Unlit");
                     lr.material = new Material(sh);
-                    lr.material.color = Color.white;   // don't tint; let start/endColor drive the color
+                    lr.material.color = Color.white;
                 }
                 lr.positionCount = 2;
                 lr.useWorldSpace = true;
@@ -107,20 +103,20 @@ public class LiDARSensor : MonoBehaviour
 
     /// Perform a scan for this sensor and return results for each beam.
     /// Uses the DRONE's orientation for direction, and this sensor's position as origin.
-    public List<BeamResult> ScanOnce(float maxRange, float minRange,
+    public List<BeamResult> ScanOnce(float maxRangeOverride, float minRangeOverride,
                                      LayerMask layers, QueryTriggerInteraction trigger)
     {
+        float useMax = maxRangeOverride > 0 ? maxRangeOverride : maxRange;
+        float useMin = minRangeOverride > 0 ? minRangeOverride : minRange;
+
         var results = new List<BeamResult>(_beams.Count);
         if (!droneRoot) droneRoot = transform.root;
-
-        Vector3 dronePos = droneRoot.position;
-        Quaternion droneRot = droneRoot.rotation;
 
         for (int i = 0; i < _beams.Count; i++)
         {
             var b = _beams[i];
 
-            // Use the sensor's *parent* as the reference frame for the sweep axes (NOT ABSOLUTE WORLD AXIS)
+            // Use the sensor's transform as sweep basis
             Transform basis = transform;
 
             // Axis of the cone = parent's up
@@ -143,39 +139,32 @@ public class LiDARSensor : MonoBehaviour
             Vector3 start = transform.position + dirWorld * selfClearance;
 
             // --- Robust raycast that skips self-hits ---
-            RaycastHit hit;
-            bool didHit = false;
-
-            // Use a small buffer so we can ignore our own colliders safely
             RaycastHit[] buf = new RaycastHit[8];
-            int n = Physics.RaycastNonAlloc(start, dirWorld, buf, maxRange, layers, trigger);
+            int n = Physics.RaycastNonAlloc(start, dirWorld, buf, useMax, layers, trigger);
             float bestDist = float.MaxValue;
-            Vector3 end = start + dirWorld * maxRange;
+            Vector3 end = start + dirWorld * useMax;
+            bool didHit = false;
 
             for (int k = 0; k < n; k++)
             {
                 var h = buf[k];
                 if (h.collider == null) continue;
-                // Skip any collider that belongs to the same root (drone/sensors)
-                if (h.collider.transform.root == droneRoot) continue;
+                if (h.collider.transform.root == droneRoot) continue; // skip self
 
                 if (h.distance < bestDist)
                 {
                     bestDist = h.distance;
-                    hit = h;
                     end = h.point;
                     didHit = true;
                 }
             }
 
-            // --- Compute local coords RELATIVE TO DRONE ORIGIN (full TRS) ---
+            // Compute local coords RELATIVE TO DRONE ORIGIN (full TRS)
             Vector3 hitLocal = droneRoot.InverseTransformPoint(end);
 
-            // Euclidean distance from drone origin (NOT start)
-            float dist = hitLocal.magnitude;
-            if (didHit) dist = Mathf.Max(minRange, dist); else dist = Mathf.Max(minRange, dist); // keep consistent min clamp
+            // Euclidean distance from drone origin
+            float dist = Mathf.Max(useMin, hitLocal.magnitude);
 
-            // Package result
             results.Add(new BeamResult
             {
                 x = hitLocal.x, y = hitLocal.y, z = hitLocal.z,
@@ -183,15 +172,17 @@ public class LiDARSensor : MonoBehaviour
                 az = b.az, el = b.el,
                 hit = didHit ? 1 : 0
             });
+
             // visuals
-            if (drawBeams && b.lr)
+            if (drawBeams && _beams[i].lr)
             {
-                b.lr.enabled = true;
-                b.lr.SetPosition(0, start);
-                b.lr.SetPosition(1, end);
+                var lr = _beams[i].lr;
+                lr.enabled = true;
+                lr.SetPosition(0, start);
+                lr.SetPosition(1, end);
                 var c = didHit ? hitColor : missColor;
-                b.lr.startColor = c; b.lr.endColor = c;
-             }
+                lr.startColor = c; lr.endColor = c;
+            }
         }
 
         return results;

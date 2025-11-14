@@ -4109,13 +4109,7 @@ PrefabInstance:
     - {fileID: 4214726985332892257, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
     - {fileID: 2971542036940430761, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: -5568371526223589888, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 622048091}
-    - targetCorrespondingSourceObject: {fileID: 7833249854982934595, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 904903131}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
 --- !u!4 &314596088 stripped
 Transform:
@@ -8731,39 +8725,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &622048087 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: -5568371526223589888, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-  m_PrefabInstance: {fileID: 314596087}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &622048091
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 622048087}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a721aeb49443dd445bc886de975c6ccb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LiDARSensor2
-  hemisphere: 0
-  droneRoot: {fileID: 0}
-  azimuthStepDeg: 15
-  elevationStepDeg: 15
-  selfClearance: 0.25
-  hitLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  triggerInteraction: 1
-  drawBeams: 1
-  lineMaterial: {fileID: 0}
-  lineWidth: 0.05
-  missColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
-  hitColor: {r: 0, g: 1, b: 0, a: 1}
-  maxRange: 30
-  minRange: 0.05
 --- !u!1001 &629610830
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11964,39 +11925,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1257174531}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &904903127 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7833249854982934595, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-  m_PrefabInstance: {fileID: 314596087}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &904903131
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 904903127}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a721aeb49443dd445bc886de975c6ccb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LiDARSensor2
-  hemisphere: 1
-  droneRoot: {fileID: 0}
-  azimuthStepDeg: 15
-  elevationStepDeg: 15
-  selfClearance: 0.25
-  hitLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  triggerInteraction: 1
-  drawBeams: 1
-  lineMaterial: {fileID: 0}
-  lineWidth: 0.05
-  missColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
-  hitColor: {r: 0, g: 1, b: 0, a: 1}
-  maxRange: 30
-  minRange: 0.05
 --- !u!1 &909948956
 GameObject:
   m_ObjectHideFlags: 0
@@ -18844,9 +18772,9 @@ GameObject:
   - component: {fileID: 1424204022}
   - component: {fileID: 1424204024}
   - component: {fileID: 1424204023}
+  - component: {fileID: 1424204025}
   - component: {fileID: 1424204026}
   - component: {fileID: 1424204027}
-  - component: {fileID: 1424204028}
   m_Layer: 0
   m_Name: Drone_root
   m_TagString: Untagged
@@ -19050,6 +18978,41 @@ MonoBehaviour:
   m_UseChildSensors: 1
   m_UseChildActuators: 1
   m_ObservableAttributeHandling: 0
+--- !u!114 &1424204025
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1424204018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f9d1654b661bd14aa0ef08150cd15e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LiDARLogger
+  topSensor: {fileID: 267885184}
+  bottomSensor: {fileID: 661008859}
+  scanInterval: 0.5
+  latestRow: []
+  latestDistances: []
+  motorController: {fileID: 0}
+  motorCount: 6
+  motorStrength:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  maxRange: 30
+  minRange: 0.05
+  environmentLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  triggerMode: 1
+  enableCsvLogging: 0
+  writeMaxRangeOnMiss: 1
+  outputFileBase: LiDAR_Scan
 --- !u!114 &1424204026
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19082,48 +19045,13 @@ MonoBehaviour:
   tiltTorqueGain: 0.7
   angVelDampRP: 0.2
   angVelDampYaw: 0.15
-  response: 8
+  response: 12
   prop1: 0
   prop2: 0
   prop3: 0
   prop4: 0
   prop5: 0
   prop6: 0
---- !u!114 &1424204028
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1424204018}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8f9d1654b661bd14aa0ef08150cd15e1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LiDARLogger
-  topSensor: {fileID: 267885184}
-  bottomSensor: {fileID: 661008859}
-  scanInterval: 0.5
-  latestRow: []
-  latestDistances: []
-  motorController: {fileID: 1424204027}
-  motorCount: 6
-  motorStrength:
-  - 0
-  - 0
-  - 0
-  - 0
-  - 0
-  - 0
-  maxRange: 30
-  minRange: 0.05
-  environmentLayers:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  triggerMode: 1
-  enableCsvLogging: 1
-  writeMaxRangeOnMiss: 1
-  outputFileBase: LiDAR_Scan
 --- !u!1001 &1437041388
 PrefabInstance:
   m_ObjectHideFlags: 0

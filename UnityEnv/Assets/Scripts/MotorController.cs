@@ -9,7 +9,7 @@ public class MotorController : MonoBehaviour
     public float maxThrustPerMotor = 12f;
 
     [Tooltip("Number of motors (fixed at 6 for hex).")]
-    [Range(6,6)] public int motorCount = 6;
+    [Range(6, 6)] public int motorCount = 6;
 
     [Header("Gains (tune to your rig)")]
     [Tooltip("How strongly the controller uses measured linear acceleration (world) to infer thrust demand.")]
@@ -28,7 +28,7 @@ public class MotorController : MonoBehaviour
     [Range(0f, 40f)] public float response = 12f;
 
     [Header("Debug (live readout)")]
-    [Range(0f,1f)] public float prop1, prop2, prop3, prop4, prop5, prop6;
+    [Range(0f, 1f)] public float prop1, prop2, prop3, prop4, prop5, prop6;
 
     Rigidbody rb;
 
@@ -36,7 +36,7 @@ public class MotorController : MonoBehaviour
     Vector3 prevVel;
     bool havePrev;
     readonly float[] strengths = new float[6];
-    readonly float[] targets   = new float[6];
+    readonly float[] targets = new float[6];
 
     void Awake()
     {
@@ -63,9 +63,9 @@ public class MotorController : MonoBehaviour
         // Positive rollErr -> need roll torque to bring right-left level
         // Positive pitchErr -> need pitch torque to bring nose-tail level
         Vector3 right = transform.right;
-        Vector3 fwd   = transform.forward;
+        Vector3 fwd = transform.forward;
 
-        float rollErr  = Vector3.Dot(up, right);   // small-angle approx
+        float rollErr = Vector3.Dot(up, right);   // small-angle approx
         float pitchErr = Vector3.Dot(up, fwd);
 
         Vector3 angVel = rb.angularVelocity; // world space (rad/s)
@@ -85,17 +85,17 @@ public class MotorController : MonoBehaviour
 
         // --- 3) Torque demands -> per-motor mix (hex) ---
         // Simple PD for roll/pitch towards level + yaw damping
-        float rollCmd  = (-tiltTorqueGain * rollErr)  + (-angVelDampRP * Vector3.Dot(angVel, right));
+        float rollCmd = (-tiltTorqueGain * rollErr) + (-angVelDampRP * Vector3.Dot(angVel, right));
         float pitchCmd = (-tiltTorqueGain * pitchErr) + (-angVelDampRP * Vector3.Dot(angVel, fwd));
-        float yawCmd   = (-angVelDampYaw * Vector3.Dot(angVel, up));
+        float yawCmd = (-angVelDampYaw * Vector3.Dot(angVel, up));
 
-        // Mix across 6 motors around the circle (0..5 at 60� steps)
+        // Mix across 6 motors around the circle (0..5 at 60° steps)
         for (int i = 0; i < 6; i++)
         {
             float a = Mathf.Deg2Rad * (i * 60f);
-            float rollMix  = Mathf.Cos(a);
+            float rollMix = Mathf.Cos(a);
             float pitchMix = Mathf.Sin(a);
-            float yawMix   = (i % 2 == 0) ? +1f : -1f; // alternate spin
+            float yawMix = (i % 2 == 0) ? +1f : -1f; // alternate spin
 
             float u = baseNorm + rollCmd * rollMix + pitchCmd * pitchMix + yawCmd * yawMix;
 
@@ -120,5 +120,4 @@ public class MotorController : MonoBehaviour
         return copy;
     }
 }
-
 

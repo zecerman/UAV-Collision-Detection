@@ -2,174 +2,182 @@ using UnityEngine;
 
 public class DroneAutopilot : MonoBehaviour
 {
-    // THIS BLOCK INIT VARS AS EXPECTED BY UNITY
-    [Header("Hover Target")]
-    public float targetY = 5f; // value is arbitrary until SetTargetY is called
-    public float prevY;   // Bucket to assist with math which mutates targetY
-    public bool lockTargetAtStart = false;
-    // END
-    // THIS BLOCK ALLOWS FOR MANUAL USER CONTROL OF DRONE, TODO: REMOVE BEFORE FINAL BUILD
-    [Header("Manual Altitude Step Mode")]
-    public bool stepMode = true;
-    public float stepMeters = 0.25f;
-    public float minY = 0.2f, maxY = 30f;
-    public KeyCode upKey = KeyCode.UpArrow;
-    public KeyCode downKey = KeyCode.DownArrow;
-    // END
-    // THIS BLOCK CONTROLS ROTOR BEHAVIOR INCLUDING PHYSICS-ACCURATE FORCE OUTPUT
-    [System.Serializable]
-    public class Rotor
-    {
-        public string name;
-        public Transform transform;       // where the lift force is applied
-    }
-
-
+    [Header("References")]
     public Rigidbody rb;
+    [System.Serializable] public class Rotor { public string name; public Transform transform; }
     public Rotor[] rotors = new Rotor[6];
 
-    [Header("Altitude PID (outputs Newtons total)")]
-    public float kp = 40f;        // proportional 
-    public float ki = 5f;         // integral
-    public float kd = 25f;        // derivative
-    public float integralClamp = 100f; // limit windup speed
+    [Header("Agent Inputs")]
+    public Vector2 tiltCmd;   // [x=roll [-1..1], z=pitch [-1..1]]
+    public float   climbCmd;  // [-1..1] vertical/thrust bias
+    public float   yawCmd;    // [-1..1] yaw
 
-    [Header("Limits & Filtering")]
-    public float maxExtraLift = 400f; // absolute limit on extra Newtons (total, not per rotor)
-    public float throttleSlewPerSec = 5f; // smooth visual throttle
-    // END
-    // THIS BLOCK CONTROLS DRONE BALANCING  
-    [Header("Level Assist")]
-    public float levelAssist = 2.0f;       // torque back to upright
-    public float angularDamping = 0.25f;   // spin damping
+    [Header("Hover Target (for logs/UI)")]
+    [SerializeField] public float targetY = 5f;
+    public float TargetY => targetY;
+    public float minY = 0.2f, maxY = 30f;
+    public bool  clampTargetY = true;
 
-    [Header("Altitude Stabilizer")]
-    // TODO: ALL THESE VALUES ARE PLACEHOLDER AND NEED TO BE TUNED FOR A QUAD WITH 4 ROTORS
-    public float tiltKp = 40f;      // torque per radian of tilt
-    public float tiltKd = 8f;       // damping against roll/pitch angular velocity
-    public float yawDamp = 2f;      // damping only around up-axis
-    public float maxLevelTorque = 200f; // clamp on force drone can exert 
-    // END
-    // THIS BLOCK EXPOSES 2 CONTROLS TO THE RL AGENT
-    public Vector2 tiltCmd;   // x=roll [-1..1], y=pitch [-1..1]
-    public float climbCmd;    // [-1..1] meters/second (or meters per update)
+    // Authority knobs , tunable
+    [Header("Authority (Agent vs Stabilizers)")]
+    [Range(0f, 1f)] public float attitudeAuthority = 0.75f; // 0 = pure stabilizer, 1 = pure agent torque
+    [Range(0f, 1f)] public float yawAuthority = 0.75f;
+    [Tooltip("Fraction of weight the agent may add/remove as raw thrust bias (on top of PID).")]
+    [Range(0f, 1f)] public float thrustAuthority = 0.50f;
+    [Tooltip("Smoothing of commands. Lower = snappier, higher = mushier.")]
+    public float cmdSlewPerSec = 6f;
 
-    [Header("RL Steering")]
-    public float maxTiltBiasDeg = 10f;   // how far RL is allowed to lean TODO
-    public float climbRate = 1.0f;       // m/s change to targetY per 1.0 climbCmd
-    //END
-    // DRIVER CODE BEGINS HERE
-    float integ;         // integral term
-    bool started;        // for Unity's reference
+    // Altitude control (PID, autopilot only)
+    [Header("Altitude PID (autopilot)")]
+    public float kp = 18f;
+    public float ki = 2f;
+    public float kd = 10f;
+    public float integralClamp = 30f;
 
-    void Reset()
-    {
-        rb = GetComponent<Rigidbody>();
-    }
+    [Header("Thrust Limits / Smoothing")]
+    public float throttleSlewPerSec = 8f;     // faster cuases UAV to obey agent more
+    public float maxExtraLiftFrac   = 0.60f;  // fraction of weight usable by PID
+
+    [Header("Target Y coupling (legacy)")]
+    [Tooltip("Meters/second change to targetY at climbCmd=1 (use smaller or 0 if you prefer raw thrust control).")]
+    public float climbRate = 0.8f;
+
+    [Header("Attitude Stabilizer (gentle, autopilot only)")]
+    public float levelKp = 12f;     // torque per rad toward upright (smaller than before)
+    public float levelKd = 4f;      // roll/pitch damping
+    public float yawDamp = 0.8f;    // yaw damping
+
+    // TODO: Most of these are maxed out anyways, remove?
+    [Header("Agent Body-Rate Authority")]
+    public float maxRollRateDeg  = 120f;   // higher = more authority
+    public float maxPitchRateDeg = 120f;
+    public float maxYawRateDeg   = 150f;
+    public float rateKp = 1.2f;
+    public float rateKd = 0.02f;
+    public float maxTorque = 250f;
+
+    // Globals
+    float integ, prevY, thrustN;
+    bool started, _armedByAgent;
+    Vector2 smTilt;          // Smoothing state for commands
+    float smClimb, smYaw;    // Smoothing state for commands
+
+    void Reset() { rb = GetComponent<Rigidbody>(); }
 
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
-        rb.centerOfMass += new Vector3(0f, -0.5f, 0f); // TODO: Verify truth of this adjustment
-        // Capture current altitude at start
+        if (!rb) rb = GetComponent<Rigidbody>();
         targetY = rb.position.y;
-        prevY = rb.position.y;
+        prevY   = rb.position.y;
+
+        // Start at hover thrust
+        thrustN = rb.mass * Physics.gravity.magnitude;
         started = true;
     }
-    // Human controls TODO: REMOVE BEFORE FINAL BUILD
-    void Update()
-    {
-        if (!stepMode) return;
 
-        if (Input.GetKeyDown(upKey))   SetTargetY(Mathf.Min(targetY + stepMeters, maxY));
-        if (Input.GetKeyDown(downKey)) SetTargetY(Mathf.Max(targetY - stepMeters, minY));
+    // Agent arms each episode (prevents running with stale inputs)
+    // TODO: Possibly no longer necessary, this was used to fix an old bug related to stale inputs that may no longer exist.
+    public void ArmForEpisode(float newY)
+    {
+        SetTargetY(newY);
+        _armedByAgent = true;
     }
-    // RL controls, used by external script
+
+    public void Disarm() => _armedByAgent = false;
+
     void FixedUpdate()
     {
-        // Safety checks
-        if (!rb || rotors == null || rotors.Length == 0 || !started) return;
+        if (!_armedByAgent || !started || !rb || rotors == null || rotors.Length == 0) return;
 
-        // Physics constants
-        float dt = Time.fixedDeltaTime;
-        float g = Physics.gravity.magnitude;
+        float dt     = Time.fixedDeltaTime;
+        float g      = Physics.gravity.magnitude;
+        float weight = rb.mass * g;
 
-        // RL: Allow RL to nudge the altitude target smoothly during episodes
-        targetY += Mathf.Clamp(climbCmd, -1f, 1f) * climbRate * dt;
+        //  0) Smooth agent commands (less smoothing = more authority) 
+        float step = Mathf.Max(0.0001f, cmdSlewPerSec) * dt;
+        smTilt.x = Mathf.MoveTowards(smTilt.x, Mathf.Clamp(tiltCmd.x, -1f, 1f), step);
+        smTilt.y = Mathf.MoveTowards(smTilt.y, Mathf.Clamp(tiltCmd.y, -1f, 1f), step);
+        smClimb = Mathf.MoveTowards(smClimb, Mathf.Clamp(climbCmd, -1f, 1f), step);
+        smYaw = Mathf.MoveTowards(smYaw, Mathf.Clamp(yawCmd,   -1f, 1f), step);
 
-        // From this point, Fixed update is organized into discrete sections as denoted by 1), 2), 3), ...
-        // 1) Altitude PID (controls total thrust around weight) 
-        float y = rb.position.y;
-        float error = targetY - y;
-
-        // Integral with clamp
-        integ = Mathf.Clamp(integ + error * dt, -integralClamp, integralClamp);
-
-        // Derivative (calculated using "derivitive-on-measurement" using error difference to avoid kick, possible because of global prevY var)
-        float deriv = -(y - prevY) / dt;
-        prevY = y;
-
-        // PID output is "extra" Newtons (positive = more lift)
-        float extraN = kp * error + ki * integ + kd * deriv;
-        extraN = Mathf.Clamp(extraN, -maxExtraLift, maxExtraLift);
-
-        // Base hover force equals weight. Distribute total across rotors.
-        float totalHover = rb.mass * g;
-        float totalDesired = totalHover + extraN;
-        float perRotor = Mathf.Max(0f, totalDesired / rotors.Length); // N per rotor
-
-        // 2) Apply lift at each rotor position (keeps tilt effects realistic) 
-        foreach (var r in rotors)
+        //    A) Altitude control 
+        // TODO: Whole section is fucked, needs rework
+        // (1) legacy path: climbCmd nudges targetY (weak effect, optional)
+        if (!Mathf.Approximately(climbRate, 0f))
         {
-            rb.AddForceAtPosition(transform.up * perRotor, r.transform.position, ForceMode.Force);
+            targetY += smClimb * climbRate * dt;
+            if (clampTargetY) targetY = Mathf.Clamp(targetY, minY, maxY);
         }
 
-        // 3) Auto-level torque Robust roll/pitch stabilizer + yaw damping
+        // (2) PID about targetY
+        float y = rb.position.y;
+        float error = targetY - y;
+        integ = Mathf.Clamp(integ + error * dt, -integralClamp, integralClamp);
+        float deriv = -(y - prevY) / Mathf.Max(1e-4f, dt);
+        prevY = y;
+
+        float pidExtraN = kp * error + ki * integ + kd * deriv;
+        float pidMax = weight * Mathf.Clamp01(maxExtraLiftFrac);
+        pidExtraN = Mathf.Clamp(pidExtraN, -pidMax, pidMax);
+
+        // (3) Agent raw thrust authority
+        float agentExtraN = smClimb * (weight * Mathf.Clamp01(thrustAuthority));
+
+        float desiredThrust = weight + pidExtraN + agentExtraN;
+
+        // Slew to desired
+        float tstep = throttleSlewPerSec * dt * weight;
+        thrustN = Mathf.MoveTowards(thrustN, desiredThrust, tstep);
+
+        // Apply distributed lift (along body up) at rotor positions
+        float perRotor = Mathf.Max(0f, thrustN / rotors.Length);
+        foreach (var r in rotors)
+            rb.AddForceAtPosition(transform.up * perRotor, r.transform.position, ForceMode.Force);
+
+        //    B) Attitude control (Agent body-rate torque blended with gentle stabilizer) 
+        // Desired body rates from agent (rad/s)
+        float p_des = Mathf.Deg2Rad * (smTilt.x * maxRollRateDeg);
+        float q_des = Mathf.Deg2Rad * (smTilt.y * maxPitchRateDeg);
+        float r_des = Mathf.Deg2Rad * (smYaw    * maxYawRateDeg);
+
+        // Current world angular vel -> body frame
+        Vector3 w_world = rb.angularVelocity;
+        Vector3 w_body  = transform.InverseTransformDirection(w_world);
+
+        // Track body rates
+        Vector3 w_des_body = new Vector3(p_des, r_des, q_des); // (roll, yaw, pitch) mapping
+        Vector3 e_rate = w_des_body - w_body;
+        Vector3 torqueRate_body = rateKp * e_rate - rateKd * w_body;
+        Vector3 torqueRate_world = transform.TransformDirection(torqueRate_body);
+
+        // Gentle upright + damping (world space)
         Vector3 up = transform.up;
+        Vector3 axis = Vector3.Cross(up, Vector3.up);
+        float sinA = axis.magnitude;
+        Vector3 tiltAxis = (sinA > 1e-6f) ? (axis / sinA) : Vector3.zero;
+        float angle = Mathf.Asin(Mathf.Clamp(sinA, 0f, 1f)); // radians
 
-        // RL: Build a "desired upright" biased by RL tiltCmd
-        float rollDeg = Mathf.Clamp(tiltCmd.x, -1f, 1f) * maxTiltBiasDeg;  // roll: left/right
-        float pitchDeg = Mathf.Clamp(tiltCmd.y, -1f, 1f) * maxTiltBiasDeg;  // pitch: fwd/back
+        Vector3 wYaw_world = Vector3.Project(w_world, up);
+        Vector3 wRP_world  = w_world - wYaw_world;
 
-        // tilt around local axes: pitch about right (x), roll about forward (z)
-        Quaternion desiredTilt =
-            Quaternion.AngleAxis(pitchDeg, transform.right) *
-            Quaternion.AngleAxis(-rollDeg, transform.forward);
+        Vector3 torqueLevel_world = tiltAxis * (levelKp * angle) + (-wRP_world * levelKd);
+        Vector3 torqueYawDamp     = -wYaw_world * yawDamp;
 
-        Vector3 desiredUp = desiredTilt * Vector3.up;
+        // Blend of PID and agent, agent torque dominates per the authority sliders magnitude
+        Vector3 torque_world =
+            torqueRate_world * attitudeAuthority
+          + torqueLevel_world * (1f - attitudeAuthority)
+          + torqueYawDamp     * (1f - yawAuthority);
 
-        // RL: Compare current 'up' to desiredUp (does not use global 'up')
-        Vector3 axis = Vector3.Cross(up, desiredUp);             // axis to rotate around to get to desired up
-        float sinAngle = axis.magnitude;                         // |sin(theta)|
-        float angle = Mathf.Asin(Mathf.Clamp(sinAngle, 0f, 1f)); // radians in [0, pi/2] for hover use
-        Vector3 tiltAxis = (sinAngle > 1e-5f) ? (axis / sinAngle) : Vector3.zero;
-
-        // Dampen angular velocity of roll/pitch
-        Vector3 w = rb.angularVelocity;
-        // Dampen yaw about body-aligned axis
-        Vector3 bodyUp = transform.up;
-        Vector3 wYaw = Vector3.Project(w, bodyUp);
-
-        // PD torque for roll/pitch + separate yaw damping
-        Vector3 wRP = w - wYaw;     // remove yaw component
-        Vector3 torqueRP = tiltAxis * (tiltKp * angle) - wRP * tiltKd;
-        float yawDampEff = yawDamp * Mathf.Clamp01(Mathf.Cos(angle) + 0.25f); // less yaw damping when drone tilted (allows the drone to "carve" turns)
-        Vector3 torqueYaw = -wYaw * yawDampEff;
-
-        // Clamp (both)
-        Vector3 torque = Vector3.ClampMagnitude(torqueRP, maxLevelTorque) + Vector3.ClampMagnitude(torqueYaw, maxLevelTorque);
-
-        // Apply
-        rb.AddTorque(torque, ForceMode.Acceleration);
+        torque_world = Vector3.ClampMagnitude(torque_world, maxTorque);
+        rb.AddTorque(torque_world, ForceMode.Acceleration);
     }
-    // END
-    // THIS BLOCK CONTROLS ALTITUDE TARGETING
-    // RL: expose a control to change targetY and reset the drone's internal state for the altitude variables
+
+    // Public helpers 
     public void SetTargetY(float newY)
     {
-        targetY = newY;
+        targetY = clampTargetY ? Mathf.Clamp(newY, minY, maxY) : newY;
         integ = 0f;
         prevY = newY;
     }
-    // END
 }

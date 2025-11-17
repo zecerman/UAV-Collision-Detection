@@ -3037,7 +3037,7 @@ GameObject:
   m_Component:
   - component: {fileID: 267885183}
   - component: {fileID: 267885184}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: LiDAR SocketF
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -4050,105 +4050,53 @@ PrefabInstance:
       propertyPath: m_Name
       value: Prop 6
       objectReference: {fileID: 0}
-    - target: {fileID: -8383124558419344257, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
-      objectReference: {fileID: 0}
     - target: {fileID: -8380157826906577798, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: Prop 3
-      objectReference: {fileID: 0}
-    - target: {fileID: -8380157826906577798, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: -6733177361254619370, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: Prop 1
       objectReference: {fileID: 0}
-    - target: {fileID: -6733177361254619370, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
-      objectReference: {fileID: 0}
     - target: {fileID: -5568371526223589888, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: LiDAR Front
-      objectReference: {fileID: 0}
-    - target: {fileID: -5568371526223589888, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: -5546747315237514756, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: Wing Top
       objectReference: {fileID: 0}
-    - target: {fileID: -5546747315237514756, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
-      objectReference: {fileID: 0}
     - target: {fileID: -5063223942988036812, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: Wing Bottom
-      objectReference: {fileID: 0}
-    - target: {fileID: -5063223942988036812, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: -4636300777304409883, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: Body
       objectReference: {fileID: 0}
-    - target: {fileID: -4636300777304409883, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
-      objectReference: {fileID: 0}
     - target: {fileID: -3798597711559607027, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: Prop 5
-      objectReference: {fileID: 0}
-    - target: {fileID: -3798597711559607027, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: Drone_mesh
       objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
-      objectReference: {fileID: 0}
     - target: {fileID: 2800250516343163423, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: Prop 4
-      objectReference: {fileID: 0}
-    - target: {fileID: 2800250516343163423, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 7833249854982934595, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: LiDAR Bottom
       objectReference: {fileID: 0}
-    - target: {fileID: 7833249854982934595, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
-      objectReference: {fileID: 0}
     - target: {fileID: 8513859187771203891, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: Arms
       objectReference: {fileID: 0}
-    - target: {fileID: 8513859187771203891, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
-      objectReference: {fileID: 0}
     - target: {fileID: 8700725330082129686, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
       propertyPath: m_Name
       value: Prop 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 8700725330082129686, guid: 8b143f2ee95c0fc4eae143acbe142754, type: 3}
-      propertyPath: m_Layer
-      value: 7
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
@@ -4474,6 +4422,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e78bc0714fd9a274081e9f011656f5b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DroneAutopilot
+  tiltCmd: {x: 0, y: 0}
+  climbCmd: 0
+  yawCmd: 0
+  targetY: 5
+  attitudeAuthority: 0.75
+  yawAuthority: 0.75
+  thrustAuthority: 0.5
+  cmdSlewPerSec: 6
   rb: {fileID: 1446309358860096613}
   rotors:
   - name: 
@@ -4484,23 +4440,15 @@ MonoBehaviour:
     transform: {fileID: 180359331407173164}
   - name: 
     transform: {fileID: 6696331216315065293}
-  tiltCmd: {x: 0, y: 0}
-  climbCmd: 0
-  yawCmd: 0
-  targetY: 5
-  minY: 0.2
-  maxY: 30
-  clampTargetY: 1
-  attitudeAuthority: 0.75
-  yawAuthority: 0.75
-  thrustAuthority: 0.5
-  cmdSlewPerSec: 6
   kp: 40
   ki: 5
   kd: 25
   integralClamp: 100
   throttleSlewPerSec: 5
   maxExtraLiftFrac: 0.6
+  minY: 0.2
+  maxY: 30
+  clampTargetY: 1
   climbRate: 1
   levelKp: 12
   levelKd: 4
@@ -4569,16 +4517,12 @@ MonoBehaviour:
   goal: {fileID: 618899442}
   autopilot: {fileID: 324950876}
   rb: {fileID: 1446309358860096613}
-  ClockScaler: 2
   lidarLogger: {fileID: 0}
   lidarEps: 0.001
   startArea: {x: 5, y: 2, z: 5}
   goalArea: {x: 8, y: 2, z: 8}
   minStartY: 2
   maxStartY: 6
-  avoidDistance: 3
-  hardAvoidDistance: 1
-  closeStuckTime: 2
   successRadius: 1
   maxTiltDeg: 45
   maxEpisodeTime: 30
@@ -4586,6 +4530,11 @@ MonoBehaviour:
   climbScale: 0.5
   actionSlewPerSec: 2
   warmupSeconds: 1
+  collisionPenalty: -0.2
+  impactScale: -0.02
+  endEpisodeOnCrash: 1
+  hardCrashSpeed: 5
+  collisionCooldown: 0.25
   floorY: 0.5
   ceilingY: 12
   vertTargetWeight: 0.15
@@ -7354,7 +7303,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 545581654}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Socket3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -9338,7 +9287,7 @@ GameObject:
   m_Component:
   - component: {fileID: 661008858}
   - component: {fileID: 661008859}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: LiDAR SocketB
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -10880,7 +10829,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 817376991}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Socket2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -12022,9 +11971,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4af6ae17e582794098986046cb5dfd0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  baseWindStrength: 2
-  randomWindStrengthRange: 2
-  gustStrength: 2
+  baseWindStrength: 0
+  randomWindStrengthRange: 0
+  gustStrength: 0
   gustFrequency: 0.5
   droneRigidbody: {fileID: 1446309358860096613}
   windDirection: {x: 1, y: 0, z: 0}
@@ -14018,7 +13967,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1070924563}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Socket1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -16071,7 +16020,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1250641128}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Socket6
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -18842,7 +18791,7 @@ GameObject:
   - component: {fileID: 1424204023}
   - component: {fileID: 1424204025}
   - component: {fileID: 1424204026}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Drone_root
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -18909,7 +18858,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.06, y: 13.74, z: 0.01}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 267885183}
@@ -18935,6 +18884,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e78bc0714fd9a274081e9f011656f5b8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DroneAutopilot
+  tiltCmd: {x: 0, y: 0}
+  climbCmd: 0
+  yawCmd: 0
+  targetY: 5
+  attitudeAuthority: 0.75
+  yawAuthority: 0.75
+  thrustAuthority: 0.5
+  cmdSlewPerSec: 6
   rb: {fileID: 1424204020}
   rotors:
   - name: 
@@ -18949,24 +18906,16 @@ MonoBehaviour:
     transform: {fileID: 2041502099}
   - name: 
     transform: {fileID: 1250641128}
-  tiltCmd: {x: 0, y: 0}
-  climbCmd: 0
-  yawCmd: 0
-  targetY: 5
-  minY: 0.2
-  maxY: 30
-  clampTargetY: 1
-  attitudeAuthority: 0.75
-  yawAuthority: 0.75
-  thrustAuthority: 0.5
-  cmdSlewPerSec: 6
   kp: 40
   ki: 5
   kd: 25
   integralClamp: 100
   throttleSlewPerSec: 5
   maxExtraLiftFrac: 0.6
-  climbRate: 1
+  minY: 0.2
+  maxY: 30
+  clampTargetY: 1
+  climbRate: 0.3
   levelKp: 12
   levelKd: 4
   yawDamp: 2
@@ -19004,23 +18953,24 @@ MonoBehaviour:
   goal: {fileID: 618899442}
   autopilot: {fileID: 1424204022}
   rb: {fileID: 1424204020}
-  ClockScaler: 5
   lidarLogger: {fileID: 0}
   lidarEps: 0.001
   startArea: {x: 5, y: 10, z: 5}
   goalArea: {x: 8, y: 2, z: 8}
-  minStartY: 15
-  maxStartY: 20
-  avoidDistance: 2
-  hardAvoidDistance: 1
-  closeStuckTime: 5
+  minStartY: 2
+  maxStartY: 6
   successRadius: 1
   maxTiltDeg: 45
-  maxEpisodeTime: 90
+  maxEpisodeTime: 60
   rpScale: 0.3
-  climbScale: 0.5
+  climbScale: 0.25
   actionSlewPerSec: 2
-  warmupSeconds: 1
+  warmupSeconds: 0.5
+  collisionPenalty: -0.2
+  impactScale: -0.02
+  endEpisodeOnCrash: 1
+  hardCrashSpeed: 5
+  collisionCooldown: 0.25
   floorY: 0.5
   ceilingY: 12
   vertTargetWeight: 0.15
@@ -19044,10 +18994,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Unity.ML-Agents::Unity.MLAgents.Policies.BehaviorParameters
   m_BrainParameters:
-    VectorObservationSize: 82
+    VectorObservationSize: 68
     NumStackedVectorObservations: 1
     m_ActionSpec:
-      m_NumContinuousActions: 4
+      m_NumContinuousActions: 3
       BranchSizes: 01000000
     VectorActionSize: 
     VectorActionDescriptions: []
@@ -19075,7 +19025,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LiDARLogger
   topSensor: {fileID: 267885184}
   bottomSensor: {fileID: 661008859}
-  goal: {fileID: 618899442}
   scanInterval: 0.05
   latestRow: []
   latestDistances: []
@@ -19087,17 +19036,14 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  maxRange: 30
+  minRange: 0.05
   environmentLayers:
     serializedVersion: 2
     m_Bits: 4294967295
   triggerMode: 1
   enableCsvLogging: 0
   outputFileBase: LiDAR_Scan
-  maxRange: 30
-  minRange: 0.05
-  hitLayers:
-    serializedVersion: 2
-    m_Bits: 0
 --- !u!114 &1424204026
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24971,7 +24917,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1764303795}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Socket4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -29182,7 +29128,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2041502099}
-  m_Layer: 7
+  m_Layer: 0
   m_Name: Socket5
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -33076,7 +33022,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LiDARLogger
   topSensor: {fileID: 0}
   bottomSensor: {fileID: 0}
-  goal: {fileID: 0}
   scanInterval: 0.5
   latestRow: []
   latestDistances: []
@@ -33088,17 +33033,14 @@ MonoBehaviour:
   - 0
   - 0
   - 0
+  maxRange: 10
+  minRange: 0.05
   environmentLayers:
     serializedVersion: 2
     m_Bits: 4294967295
   triggerMode: 1
   enableCsvLogging: 0
   outputFileBase: LiDAR_Scan
-  maxRange: 10
-  minRange: 0.05
-  hitLayers:
-    serializedVersion: 2
-    m_Bits: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

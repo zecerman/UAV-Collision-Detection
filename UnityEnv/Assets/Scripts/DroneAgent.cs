@@ -104,16 +104,6 @@ public class DroneAgent : Agent
     private int collisionsThisEpisode = 0;
     private bool successThisEpisode = false;
     private StatsRecorder stats;
-    
-    // Hyperparams for the reward section
-    [Header("Shaping")]
-    public float floorY = 0.5f;
-    public float ceilingY = 12f;
-    public float vertTargetWeight = 0.15f;
-    public float horizProgressWeight = 0.3f;
-    public float alignWeight = 0.01f;
-    public float controlCost = 0.0015f;
-    public float tinyTimePenalty = -0.005f;
 
     // GOAL BEACON
     [Header("Goal Beacon (runtime)")]
@@ -394,21 +384,23 @@ public override void OnActionReceived(ActionBuffers actions)
     r_heading = 0.01f * heading;
     AddReward(r_heading);
 
-    // (D) Vertical band penalty
+    /* (D) Vertical band penalty
     float yBandCenter = goal.position.y;
     float yBandHalf   = 4.0f;
     float yErrOutside = Mathf.Max(0f, Mathf.Abs(transform.position.y - yBandCenter) - yBandHalf);
     r_yband = -0.02f * yErrOutside;
     AddReward(r_yband);
+    */
 
     // (E) Time + distance penalty (break the hover optimum)
-    float distNorm = Mathf.Clamp01(dist / 40f); // 0 when at goal, 1 when far
-    r_time = tinyTimePenalty * (0.5f + distNorm); 
-    // When far, ~1.5 * tinyTimePenalty; when close, ~0.5 * tinyTimePenalty
+    float tinyTimePenalty = -0.0005f; // VERY small number
+    float distNorm = Mathf.Clamp01(dist / 40f);
+    r_time = tinyTimePenalty * (0.5f + distNorm); // in about [-0.003, -0.006]
     AddReward(r_time);
 
+
     // Small living bonus when near the goal region to encourage staying there
-    if (dist < successRadius * 2f)
+    if (dist < successRadius * 5f)
     {
         AddReward(0.002f);
     }

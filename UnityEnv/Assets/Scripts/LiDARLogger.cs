@@ -7,6 +7,7 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class LiDARLogger : MonoBehaviour
 {
+
     [Header("Sensors")]
     public LiDARSensor topSensor;    // assign "LiDAR Sensor Top"
     public LiDARSensor bottomSensor; // assign "LiDAR Sensor Bottom"
@@ -16,8 +17,8 @@ public class LiDARLogger : MonoBehaviour
     public Transform goal;
 
     [Header("Timing")]
-    [Tooltip("Seconds between scans. Set small (e.g., 0.1) for training.")]
-    public float scanInterval = 0.5f;
+    [Tooltip("Seconds between scans")]
+    public float scanInterval = 0.05f;
 
     [Header("Live Access (read by DroneAgent)")]
     // Schema:
@@ -26,14 +27,9 @@ public class LiDARLogger : MonoBehaviour
     //   vx, vy, vz,
     //   ax, ay, az,
     //   x_distance, y_distance, z_distance,
-    //   motor1..motorN,
     //   beam_distances... ]
     public float[] latestRow;            // ALWAYS initialized at Start()
     public float[] latestDistances;      // distances only, length = beamCount (convenience)
-
-    [Header("Motors")]
-    public int motorCount = 6;
-    public float[] motorStrength = new float[6];
 
     [Header("Shared Raycast Settings (applied to all sensors)")]
     public LayerMask environmentLayers = ~0;  // include ground/obstacles; exclude Drone
@@ -58,16 +54,12 @@ public class LiDARLogger : MonoBehaviour
 
     // fixed-column header portion counts
     // t, yaw, pitch, roll, vx,vy,vz, ax,ay,az, x_distance, y_distance, z_distance
-    const int HeaderFloatCount = 13;  // NEW: was 10
+    const int HeaderFloatCount = 13;
     int _beamCount = 0;               // computed at Start from sensors
-    int _rowLen = 0;                  // HeaderFloatCount + motorCount + _beamCount
+    int _rowLen = 0;                  // HeaderFloatCount + _beamCount
 
     void Awake()
     {
-        // Ensure motorStrength length
-        if (motorStrength == null || motorStrength.Length < motorCount)
-            motorStrength = new float[motorCount];
-
         // Layer mask defaults
         if (hitLayers.value == 0)
         {
@@ -124,7 +116,7 @@ public class LiDARLogger : MonoBehaviour
 
         // Compute & allocate
         _beamCount = (topSensor ? topSensor.BeamCount : 0) + (bottomSensor ? bottomSensor.BeamCount : 0);
-        _rowLen = HeaderFloatCount + motorCount + _beamCount;
+        _rowLen = HeaderFloatCount + _beamCount;
 
         latestDistances = new float[_beamCount];
         for (int i = 0; i < _beamCount; i++) latestDistances[i] = maxRange;
@@ -167,14 +159,13 @@ public class LiDARLogger : MonoBehaviour
 
         // Compute constant beam count
         _beamCount = (topSensor ? topSensor.BeamCount : 0) + (bottomSensor ? bottomSensor.BeamCount : 0);
-        _rowLen = HeaderFloatCount + motorCount + _beamCount;
+        _rowLen = HeaderFloatCount + _beamCount;
 
         // Seed live arrays with valid lengths so Agent can read immediately
         latestRow = new float[_rowLen];
         latestDistances = new float[_beamCount];
 
         // Reasonable defaults before first true scan:
-        //  - header floats & motors stay 0
         //  - distances initialized to maxRange (no hit)
         for (int i = 0; i < _beamCount; i++) latestDistances[i] = maxRange;
         WriteDistancesIntoLatestRow(); // copies latestDistances into tail of latestRow
@@ -235,9 +226,6 @@ public class LiDARLogger : MonoBehaviour
             "x_distance(m)","y_distance(m)","z_distance(m)"  // NEW
         };
 
-        for (int m = 1; m <= motorCount; m++)
-            H.Add($"motor{m}.strength");
-
         for (int i = 0; i < _beamCount; i++)
         {
             int k = i + 1;
@@ -248,132 +236,128 @@ public class LiDARLogger : MonoBehaviour
     }
 
     // SCAN
-    void DoScan(bool updateCsv)
+void DoScan(bool updateCsv)
+{
+    var inv = CultureInfo.InvariantCulture;
+
+    int idx = 0;
+
+    // 1) Scan beams (distances only for training)
+    if (topSensor)
     {
-        var inv = CultureInfo.InvariantCulture;
-
-        int idx = 0;
-
-        // 1) Scan beams (distances only for training)
-        if (topSensor)
+        var rTop = topSensor.ScanOnce(maxRange, minRange, hitLayers, triggerMode);
+        EnsureDistancesLen();
+        for (int i = 0; i < rTop.Count; i++)
         {
-            var rTop = topSensor.ScanOnce(maxRange, minRange, hitLayers, triggerMode);
-            EnsureDistancesLen();
-            for (int i = 0; i < rTop.Count; i++)
+            float d = rTop[i].dist;
+
+            // Sanitize distance
+            if (float.IsNaN(d) || float.IsInfinity(d) || d < 0f)
             {
-                float d = rTop[i].dist;
-
-                // Sanitize distance
-                if (float.IsNaN(d) || float.IsInfinity(d) || d < 0f)
-                {
-                    Debug.LogWarning($"[LiDARLogger] Invalid top distance {d} on beam {i}, clamping to maxRange");
-                    d = maxRange;
-                }
-                else
-                {
-                    // Clamp within [minRange, maxRange]
-                    d = Mathf.Clamp(d, minRange, maxRange);
-                }
-
-                latestDistances[idx++] = d;
+                Debug.LogWarning($"[LiDARLogger] Invalid top distance {d} on beam {i}, clamping to maxRange");
+                d = maxRange;
             }
-        }
-
-        if (bottomSensor)
-        {
-            var rBot = bottomSensor.ScanOnce(maxRange, minRange, hitLayers, triggerMode);
-            EnsureDistancesLen();
-            for (int i = 0; i < rBot.Count; i++)
+            else
             {
-                float d = rBot[i].dist;
-
-                if (float.IsNaN(d) || float.IsInfinity(d) || d < 0f)
-                {
-                    Debug.LogWarning($"[LiDARLogger] Invalid bottom distance {d} on beam {i}, clamping to maxRange");
-                    d = maxRange;
-                }
-                else
-                {
-                    d = Mathf.Clamp(d, minRange, maxRange);
-                }
-
-                latestDistances[idx++] = d;
+                // Clamp within [minRange, maxRange]
+                d = Mathf.Clamp(d, minRange, maxRange);
             }
+
+            latestDistances[idx++] = d;
         }
-
-        // Pad remaining beams (if one sensor missing, etc.)
-        for (; idx < _beamCount; idx++)
-            latestDistances[idx] = maxRange;
-
-        // 2) Compute kinematics for header
-        float t = Time.time;
-        Vector3 dronePos = transform.position;
-
-        Vector3 e = transform.rotation.eulerAngles; // x=pitch, y=yaw, z=roll
-        float yaw = e.y, pitch = e.x, roll = e.z;
-
-        Vector3 vel = Vector3.zero, acc = Vector3.zero;
-        if (!_first)
-        {
-            float dt = Mathf.Max(1e-6f, t - _prevTimestamp);
-            vel = (dronePos - _prevPos) / dt;
-            acc = (vel - _prevVel) / dt;
-        }
-
-        // distance from drone to goal in world XYZ
-        Vector3 dGoal = Vector3.zero;
-        if (goal != null)
-        {
-            dGoal = goal.position - dronePos; // same sign as (goal - drone)
-        }
-
-        // 3) Fill latestRow (header + motors + distances)
-        int p = 0;
-        latestRow[p++] = t;
-        latestRow[p++] = yaw;   latestRow[p++] = pitch; latestRow[p++] = roll;
-        latestRow[p++] = vel.x; latestRow[p++] = vel.y; latestRow[p++] = vel.z;
-        latestRow[p++] = acc.x; latestRow[p++] = acc.y; latestRow[p++] = acc.z;
-        latestRow[p++] = dGoal.x;  // x_distance
-        latestRow[p++] = dGoal.y;  // y_distance
-        latestRow[p++] = dGoal.z;  // z_distance
-
-        for (int m = 0; m < motorCount; m++)
-            latestRow[p++] = (m < motorStrength.Length ? motorStrength[m] : 0f);
-
-        for (int i2 = 0; i2 < _beamCount; i2++)
-            latestRow[p++] = latestDistances[i2];
-
-        // 4) CSV (optional)
-        if (updateCsv && _writer != null)
-        {
-            var row = new List<string>(_rowLen);
-            int r = 0;
-            // header floats (0..12)
-            for (int i3 = 0; i3 < HeaderFloatCount; i3++)
-            {
-                string fmt;
-                if (i3 == 0)          fmt = "F3"; // time
-                else if (i3 <= 3)     fmt = "F3"; // yaw/pitch/roll
-                else                  fmt = "F4"; // velocities, acc, distances
-                row.Add(latestRow[r++].ToString(fmt, inv));
-            }
-            // motors
-            for (int i3 = 0; i3 < motorCount; i3++)
-                row.Add(latestRow[r++].ToString("F3", inv));
-            // distances
-            for (int i3 = 0; i3 < _beamCount; i3++)
-                row.Add(latestRow[r++].ToString("F4", inv));
-
-            _writer.WriteLine(string.Join(",", row));
-            _writer.Flush();
-        }
-
-        _first = false;
-        _prevTimestamp = t;
-        _prevPos = dronePos;
-        _prevVel = vel;
     }
 
+    if (bottomSensor)
+    {
+        var rBot = bottomSensor.ScanOnce(maxRange, minRange, hitLayers, triggerMode);
+        EnsureDistancesLen();
+        for (int i = 0; i < rBot.Count; i++)
+        {
+            float d = rBot[i].dist;
+
+            if (float.IsNaN(d) || float.IsInfinity(d) || d < 0f)
+            {
+                Debug.LogWarning($"[LiDARLogger] Invalid bottom distance {d} on beam {i}, clamping to maxRange");
+                d = maxRange;
+            }
+            else
+            {
+                d = Mathf.Clamp(d, minRange, maxRange);
+            }
+
+            latestDistances[idx++] = d;
+        }
+    }
+
+    // Pad remaining beams (if one sensor missing, etc.)
+    for (; idx < _beamCount; idx++)
+        latestDistances[idx] = maxRange;
+
+    // 2) Compute kinematics for header
+    float t = Time.time;
+    Vector3 dronePos = transform.position;
+
+    Vector3 e = transform.rotation.eulerAngles; // x=pitch, y=yaw, z=roll
+    float yaw = e.y, pitch = e.x, roll = e.z;
+
+    Vector3 vel = Vector3.zero, acc = Vector3.zero;
+    if (!_first)
+    {
+        float dt = Mathf.Max(1e-6f, t - _prevTimestamp);
+        vel = (dronePos - _prevPos) / dt;
+        acc = (vel - _prevVel) / dt;
+    }
+
+    // distance from drone to goal in world XYZ
+    Vector3 dGoal = Vector3.zero;
+    if (goal != null)
+    {
+        dGoal = goal.position - dronePos; // same sign as (goal - drone)
+    }
+
+    // 3) Fill latestRow (header + distances)
+    int p = 0;
+    latestRow[p++] = t;
+    latestRow[p++] = yaw;   latestRow[p++] = pitch; latestRow[p++] = roll;
+    latestRow[p++] = vel.x; latestRow[p++] = vel.y; latestRow[p++] = vel.z;
+    latestRow[p++] = acc.x; latestRow[p++] = acc.y; latestRow[p++] = acc.z;
+    latestRow[p++] = dGoal.x;  // x_distance
+    latestRow[p++] = dGoal.y;  // y_distance
+    latestRow[p++] = dGoal.z;  // z_distance
+
+    for (int i2 = 0; i2 < _beamCount; i2++)
+        latestRow[p++] = latestDistances[i2];
+
+    // 4) CSV (optional)
+    if (updateCsv && _writer != null)
+    {
+        var row = new List<string>(_rowLen);
+        int r = 0;
+        // header floats (0..12)
+        for (int i3 = 0; i3 < HeaderFloatCount; i3++)
+        {
+            string fmt;
+            if (i3 == 0)          fmt = "F3"; // time
+            else if (i3 <= 3)     fmt = "F3"; // yaw/pitch/roll
+            else                  fmt = "F4"; // velocities, acc, distances
+            row.Add(latestRow[r++].ToString(fmt, inv));
+        }
+        // distances
+        for (int i3 = 0; i3 < _beamCount; i3++)
+            row.Add(latestRow[r++].ToString("F4", inv));
+
+        _writer.WriteLine(string.Join(",", row));
+        _writer.Flush();
+    }
+
+    _first = false;
+    _prevTimestamp = t;
+    _prevPos = dronePos;
+    _prevVel = vel;
+}
+
+
+    // HELPERS
     void EnsureDistancesLen()
     {
         if (latestDistances == null || latestDistances.Length != _beamCount)
@@ -385,7 +369,7 @@ public class LiDARLogger : MonoBehaviour
         if (latestRow == null || latestRow.Length != _rowLen)
             latestRow = new float[_rowLen];
 
-        int start = HeaderFloatCount + motorCount;
+        int start = HeaderFloatCount;
         for (int i = 0; i < _beamCount; i++)
             latestRow[start + i] = latestDistances[i];
     }

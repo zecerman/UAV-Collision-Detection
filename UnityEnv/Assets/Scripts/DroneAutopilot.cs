@@ -4,7 +4,10 @@ public class DroneAutopilot : MonoBehaviour
 {
     [Header("References")]
     public Rigidbody rb;
-    [System.Serializable] public class Rotor { public string name; public Transform transform; }
+    [System.Serializable] public class Rotor { 
+        public string name; 
+        public Transform transform; 
+    }
     public Rotor[] rotors = new Rotor[6];
 
     [Header("Agent Inputs")]
@@ -27,20 +30,17 @@ public class DroneAutopilot : MonoBehaviour
     [Tooltip("Smoothing of commands. Lower = snappier, higher = mushier.")]
     public float cmdSlewPerSec = 6f;
 
-    // Altitude control (PID, autopilot only)
-    [Header("Altitude PID (autopilot)")]
-    public float kp = 18f;
-    public float ki = 2f;
-    public float kd = 10f;
-    public float integralClamp = 30f;
+    // Altitude control reworked for RL: velocity PID
+    [Header("Altitude Control (velocity PID for RL)")]
+    public float maxClimbRate    = 3f;   // m/s, command range for vertical speed
+    public float vKp             = 3f;
+    public float vKi             = 0.5f;
+    public float vKd             = 1f;
+    public float vIntegralLimit  = 5f;
 
-    [Header("Thrust Limits / Smoothing")]
-    public float throttleSlewPerSec = 8f;     // faster cuases UAV to obey agent more
-    public float maxExtraLiftFrac   = 0.60f;  // fraction of weight usable by PID
-
-    [Header("Target Y coupling (legacy)")]
-    [Tooltip("Meters/second change to targetY at climbCmd=1 (use smaller or 0 if you prefer raw thrust control).")]
-    public float climbRate = 0.8f;
+    [Header("Thrust Smoothing")]
+    public float throttleSlewPerSec = 8f;     // faster causes UAV to obey agent more
+    public float maxThrustG         = 2.5f;   // max thrust as multiple of weight
 
     [Header("Attitude Stabilizer (gentle, autopilot only)")]
     public float levelKp = 12f;     // torque per rad toward upright (smaller than before)
@@ -57,7 +57,7 @@ public class DroneAutopilot : MonoBehaviour
     public float maxTorque = 250f;
 
     // Globals
-    float integ, prevY, thrustN;
+    float vInt, prevVError, thrustN;
     bool started, _armedByAgent;
     Vector2 smTilt;          // Smoothing state for commands
     float smClimb, smYaw;    // Smoothing state for commands
@@ -68,7 +68,6 @@ public class DroneAutopilot : MonoBehaviour
     {
         if (!rb) rb = GetComponent<Rigidbody>();
         targetY = rb.position.y;
-        prevY   = rb.position.y;
 
         // Start at hover thrust
         thrustN = rb.mass * Physics.gravity.magnitude;
@@ -100,30 +99,29 @@ public class DroneAutopilot : MonoBehaviour
         smClimb = Mathf.MoveTowards(smClimb, Mathf.Clamp(climbCmd, -1f, 1f), step);
         smYaw = Mathf.MoveTowards(smYaw, Mathf.Clamp(yawCmd,   -1f, 1f), step);
 
-        //    A) Altitude control 
-        // TODO: Whole section is fucked, needs rework
-        // (1) legacy path: climbCmd nudges targetY (weak effect, optional)
-        if (!Mathf.Approximately(climbRate, 0f))
-        {
-            targetY += smClimb * climbRate * dt;
-            if (clampTargetY) targetY = Mathf.Clamp(targetY, minY, maxY);
-        }
+        //    A) Altitude control (reworked: velocity PID about vertical speed)
+        // Measure vertical velocity in world space
+        float vY = Vector3.Dot(rb.linearVelocity, Vector3.up);
 
-        // (2) PID about targetY
-        float y = rb.position.y;
-        float error = targetY - y;
-        integ = Mathf.Clamp(integ + error * dt, -integralClamp, integralClamp);
-        float deriv = -(y - prevY) / Mathf.Max(1e-4f, dt);
-        prevY = y;
+        // Agent command -> desired vertical speed
+        float vY_desired = Mathf.Clamp(smClimb, -1f, 1f) * maxClimbRate;
 
-        float pidExtraN = kp * error + ki * integ + kd * deriv;
-        float pidMax = weight * Mathf.Clamp01(maxExtraLiftFrac);
-        pidExtraN = Mathf.Clamp(pidExtraN, -pidMax, pidMax);
+        // Velocity error
+        float vError = vY_desired - vY;
 
-        // (3) Agent raw thrust authority
-        float agentExtraN = smClimb * (weight * Mathf.Clamp01(thrustAuthority));
+        // PID on vertical velocity
+        vInt = Mathf.Clamp(vInt + vError * dt, -vIntegralLimit, vIntegralLimit);
+        float vDeriv = (vError - prevVError) / Mathf.Max(1e-4f, dt);
+        prevVError = vError;
 
-        float desiredThrust = weight + pidExtraN + agentExtraN;
+        float vCorrectionN = vKp * vError + vKi * vInt + vKd * vDeriv;
+
+        // Base hover thrust plus correction
+        float desiredThrust = weight + vCorrectionN;
+
+        // Clamp to reasonable range (0 .. maxThrustG * weight)
+        float maxThrustN = weight * maxThrustG;
+        desiredThrust = Mathf.Clamp(desiredThrust, 0f, maxThrustN);
 
         // Slew to desired
         float tstep = throttleSlewPerSec * dt * weight;
@@ -177,7 +175,7 @@ public class DroneAutopilot : MonoBehaviour
     public void SetTargetY(float newY)
     {
         targetY = clampTargetY ? Mathf.Clamp(newY, minY, maxY) : newY;
-        integ = 0f;
-        prevY = newY;
+        vInt = 0f;
+        prevVError = 0f;
     }
 }

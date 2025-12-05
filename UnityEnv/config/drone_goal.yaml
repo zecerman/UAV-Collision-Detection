@@ -5,7 +5,7 @@ default_settings:
   trainer_type: ppo
   hyperparameters:
     batch_size: 2048
-    buffer_size: 131072
+    buffer_size: 40960
     learning_rate: 3.0e-4
     beta: 3.0e-3       
     epsilon: 0.2
@@ -27,3 +27,8 @@ default_settings:
 behaviors:
   drone_goal: {}
   # leaving this {} empty causes Unity to use default_settings ^
+
+
+
+
+  

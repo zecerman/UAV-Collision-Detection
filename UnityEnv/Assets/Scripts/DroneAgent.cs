@@ -84,8 +84,8 @@ public class DroneAgent : Agent
     public float maxEpisodeTime = 90f;
 
     [Header("Action shaping/Agent smoothing")]
-    public float rpScale = 0.3f;           // roll/pitch scale 
-    public float climbScale = 0.25f;       // climb scale (m/s at action=1)
+    public float rpScale = 0.6f;           // roll/pitch scale 
+    public float climbScale = 0.5f;       // climb scale (m/s at action=1)
     public float actionSlewPerSec = 2.0f;  // how fast actions can change
     public float warmupSeconds = 0.5f;     // zero actions at episode start
 
@@ -156,6 +156,7 @@ public override void OnEpisodeBegin()
     successThisEpisode = false;
     closeProximityTimer = 0f;
     lastMinLidarDist = Mathf.Infinity;
+    lastProx = Mathf.Infinity;
     noImproveTimer = 0f;
 
     // Reset physics
@@ -185,8 +186,8 @@ public override void OnEpisodeBegin()
     //  Goal selection (porch / fallback) 
     if (porchWaypoints != null && porchWaypoints.Length > 0)
     {
+        currentPorchIndex = Random.Range(0, porchWaypoints.Length);
         goal.position = porchWaypoints[currentPorchIndex].position;
-        currentPorchIndex = (currentPorchIndex + 1) % porchWaypoints.Length;
     }
     else
     {
@@ -247,8 +248,8 @@ public override void CollectObservations(VectorSensor sensor)
                 raw = maxRange;
             }
             // If we are looking at the first 16 values, they are NOT LiDAR beams so should not be used for min distance calculation
-            // TODO: 16 is hardcoded, should be parameterized and MUST be updated if the LiDAR config changes
-            if (i < 16) {
+            // TODO: 10 is hardcoded, should be parameterized and MUST be updated if the LiDAR config changes
+            if (i < 10) {
                 // normalized for observation
                 norm = Mathf.Clamp01(raw * invMax);
             } else {
@@ -308,6 +309,8 @@ public override void CollectObservations(VectorSensor sensor)
 }
 
 // 4 continuous actions: roll, pitch, climb, yaw
+private float lastProx = Mathf.Infinity;
+
 public override void OnActionReceived(ActionBuffers actions)
 {
     var act = actions.ContinuousActions;
@@ -317,106 +320,127 @@ public override void OnActionReceived(ActionBuffers actions)
         return;
     }
 
+    float dt = Time.fixedDeltaTime;
     float tilt = Vector3.Angle(transform.up, Vector3.up);
-    timer += Time.fixedDeltaTime;
-    episodeT += Time.fixedDeltaTime;
+    timer     += dt;
+    episodeT  += dt;
+
+    // --- ACTION SMOOTHING / AUTOPILOT COMMANDS ---
 
     float targetRoll  = Mathf.Clamp(act[0], -1f, 1f) * rpScale;
     float targetPitch = Mathf.Clamp(act[1], -1f, 1f) * rpScale;
     float targetClimb = Mathf.Clamp(act[2], -1f, 1f) * climbScale;
     float targetYaw   = Mathf.Clamp(act[3], -1f, 1f) * 1.0f;
 
-    float step = actionSlewPerSec * Time.fixedDeltaTime;
+    float step = actionSlewPerSec * dt;
     smRoll  = Mathf.MoveTowards(smRoll,  targetRoll,  step);
     smPitch = Mathf.MoveTowards(smPitch, targetPitch, step);
     smClimb = Mathf.MoveTowards(smClimb, targetClimb, step);
     smYaw   = Mathf.MoveTowards(smYaw,   targetYaw,   step);
 
-    if (episodeT < warmupSeconds) { smRoll = smPitch = smClimb = 0f; }
+    if (episodeT < warmupSeconds)
+    {
+        smRoll = smPitch = smClimb = 0f;
+    }
 
-    autopilot.tiltCmd   = new Vector2(smRoll, smPitch);
-    autopilot.climbCmd  = smClimb;
-    autopilot.yawCmd    = smYaw;
+    autopilot.tiltCmd  = new Vector2(smRoll, smPitch);
+    autopilot.climbCmd = smClimb;
+    autopilot.yawCmd   = smYaw;
 
-    // REWARD SECTION 
-    float r_potential = 0f, r_vel = 0f, r_heading = 0f, r_yband = 0f, r_time = 0f;
-
+    // --- REWARD SECTION ---
     Vector3 toGoal = goal.position - transform.position;
-    float dist = toGoal.magnitude;
+    float   dist   = toGoal.magnitude;
+    float   speed  = rb.linearVelocity.magnitude;
+    float tiltDeg = Vector3.Angle(transform.up, Vector3.up);
 
-    // track best distance for no-improvement logic
-    if (dist + 0.1f < bestDist)
-    {
-        bestDist = dist;
-        noImproveTimer = 0f;
-    }
-    else
-    {
-        noImproveTimer += Time.fixedDeltaTime;
-    }
-
-    // YAW SECTION
-    Vector3 fwdXZ = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
-    Vector3 dirXZ = Vector3.ProjectOnPlane(toGoal,            Vector3.up).normalized;
-    float headingErr = Mathf.Atan2(
-        Vector3.Cross(fwdXZ, dirXZ).y,
-        Vector3.Dot(fwdXZ,   dirXZ));
-    float face = Mathf.Cos(headingErr);
-    AddReward(0.01f * face);
-
-    float yawRateCur = Vector3.Dot(rb.angularVelocity, transform.up); // rad/s
-    AddReward(-0.0005f * Mathf.Abs(yawRateCur));
-
-    // (A) Potential-based shaping (distance improvement)
-    float kPot = 1.0f;
-    float distDelta = prevDist - dist;
-    r_potential = kPot * distDelta;
-    AddReward(r_potential);
+    // 1) Step-wise distance progress (main progress signal)
+    float stepDelta = prevDist - dist;   // >0 = got closer this step
     prevDist = dist;
 
-    // (B) Velocity toward goal
-    float vToward = Vector3.Dot(rb.linearVelocity, toGoal.normalized);
-    r_vel = 0.02f * vToward;
-    AddReward(r_vel);
+    if (dist < bestDist)
+        bestDist = dist;                 // keep bestDist for logging / debug
 
-    // (C) Heading alignment (nose pointing to goal)
-    float heading = Vector3.Dot(transform.forward, toGoal.normalized);
-    r_heading = 0.01f * heading;
-    AddReward(r_heading);
-
-    /* (D) Vertical band penalty
-    float yBandCenter = goal.position.y;
-    float yBandHalf   = 4.0f;
-    float yErrOutside = Mathf.Max(0f, Mathf.Abs(transform.position.y - yBandCenter) - yBandHalf);
-    r_yband = -0.02f * yErrOutside;
-    AddReward(r_yband);
-    */
-
-    // (E) Time + distance penalty (break the hover optimum)
-    float tinyTimePenalty = -0.0005f; // VERY small number
-    float distNorm = Mathf.Clamp01(dist / 40f);
-    r_time = tinyTimePenalty * (0.5f + distNorm); // in about [-0.003, -0.006]
-    AddReward(r_time);
-
-
-    // Small living bonus when near the goal region to encourage staying there
-    if (dist < successRadius * 5f)
+    // reward any step that reduces distance to goal
+    if (stepDelta > 0f)
     {
-        AddReward(0.002f);
+        AddReward(2.0f * stepDelta);
     }
 
-    //  PROXIMITY SHAPING 
+
+    // 2) "NoImprove" = genuinely stuck: barely changing distance AND moving very slowly
+    float absDelta       = Mathf.Abs(stepDelta);
+    bool tinyDistChange  = absDelta < 0.02f;  
+    bool verySlow        = speed   < 0.3f; 
+
+    if (tinyDistChange && verySlow)
+        noImproveTimer += dt;
+    else
+        noImproveTimer = 0f;
+
+    // 3) Velocity-toward-goal shaping (horizontal + vertical)
+    {
+        // Horizontal component
+        Vector3 toGoalXZ = new Vector3(toGoal.x, 0f, toGoal.z);
+        if (toGoalXZ.sqrMagnitude > 1e-4f)
+        {
+            Vector3 vXZ        = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+            float   vTowardXZ  = Vector3.Dot(vXZ, toGoalXZ.normalized);
+            AddReward(0.004f * vTowardXZ * dt);   // stronger horizontal progress
+        }
+
+        // Vertical component: only emphasize when horizontally reasonably close
+        float horizDist = new Vector2(toGoal.x, toGoal.z).magnitude;
+        if (horizDist < successRadius * 3.0f)
+        {
+            float vY          = rb.linearVelocity.y;
+            float signToGoalY = Mathf.Sign(toGoal.y); // +1 if goal above, -1 if below
+            float vTowardY    = vY * signToGoalY;     // positive if moving toward goal altitude
+            AddReward(0.003f * vTowardY * dt);
+        }
+
+        // Yaw-rate damping (keep as you had)
+        float yawRateCur = Vector3.Dot(rb.angularVelocity, transform.up);
+        AddReward(-0.0005f * Mathf.Abs(yawRateCur) * dt);
+    }
+
+    // 5) Time penalty (shorter episodes are better)
+    AddReward(-0.00005f);
+
+
+    // 6) Small bonus for being near goal, stable and slow (but not huge)
+    if (dist < successRadius * 3f)
+    {
+        if (speed < 1.0f && tiltDeg < 15f)
+        {
+            AddReward(0.005f * dt);
+        }
+    }
+
+    // 7) Proximity / obstacle shaping (with escape gradient using lastProx)
     if (!float.IsInfinity(lastMinLidarDist))
     {
-        if (lastMinLidarDist < avoidDistance)
+        float d = lastMinLidarDist;
+
+        // If we're inside the avoidance zone and d increases, reward that (escaping walls)
+        if (d < avoidDistance && lastProx < Mathf.Infinity)
+        {
+            float deltaClear = d - lastProx;
+            if (deltaClear > 0f)
+            {
+                AddReward(0.02f * deltaClear);
+            }
+        }
+        lastProx = d;
+
+        if (d < avoidDistance)
         {
             float denom = Mathf.Max(avoidDistance - hardAvoidDistance, 0.01f);
-            float prox = Mathf.Clamp01((avoidDistance - lastMinLidarDist) / denom);
+            float prox  = Mathf.Clamp01((avoidDistance - d) / denom);
 
             AddReward(-0.02f * prox * prox);
 
-            if (lastMinLidarDist < hardAvoidDistance)
-                closeProximityTimer += Time.fixedDeltaTime;
+            if (d < hardAvoidDistance)
+                closeProximityTimer += dt;
             else
                 closeProximityTimer = 0f;
         }
@@ -427,16 +451,17 @@ public override void OnActionReceived(ActionBuffers actions)
     }
     else
     {
+        lastProx           = Mathf.Infinity;
         closeProximityTimer = 0f;
     }
 
-    //  EPISODE TERMINATION CONDITIONS WITH LOGS 
+    // --- EPISODE TERMINATION CONDITIONS WITH LOGS ---
 
     // Stuck too close to obstacle
     if (closeProximityTimer > closeStuckTime)
     {
         AddReward(-2.0f);
-        RecordStats();
+        RecordStats(EndReason.Stuck);
         Debug.Log(
             $"Episode end: {EndReason.Stuck} " +
             $"(minLiDAR={lastMinLidarDist:F2} m, " +
@@ -446,37 +471,34 @@ public override void OnActionReceived(ActionBuffers actions)
         return;
     }
 
-    // Collision handling (unchanged)
-    var impactScale = -0.02f;
-    var collisionCooldown = 0.5f; 
-    if (collisionQueued && (Time.time - lastCollisionPenaltyTime) >= collisionCooldown)
+    if (collisionQueued)
     {
-        float penalty = -2.0f + (impactScale * queuedCollisionSpeed);
-        AddReward(penalty);
+        float v = queuedCollisionSpeed;
 
-        if (queuedCollisionSpeed >= 5.0f)
-        {
-            AddReward(-5.0f);
-            RecordStats();
-            Debug.Log(
-                $"Episode end: {EndReason.HardCrash} " +
-                $"(impactSpeed={queuedCollisionSpeed:F2}, pos={transform.position})"
-            );
-            EndEpisode();
-            return;
-        }
+        // Strong penalty, scaled by impact speed (quadratic in v)
+        float crashPenalty = -10.0f * v;
+        AddReward(crashPenalty);
 
-        collisionQueued = false;
-        queuedCollisionSpeed = 0f;
+        RecordStats(EndReason.HardCrash);
+        Debug.Log(
+            $"Episode end: {EndReason.HardCrash} " +
+            $"(impactSpeed={v:F2}, penalty={crashPenalty:F1}, pos={transform.position})"
+        );
+
+        // Reset collision state
+        collisionQueued        = false;
+        queuedCollisionSpeed   = 0f;
         lastCollisionPenaltyTime = Time.time;
-    }
 
+        EndEpisode();
+        return;
+    }
     // Success
     if (dist < successRadius)
     {
-        AddReward(+40f);
+        AddReward(+100f);
         successThisEpisode = true;
-        RecordStats();
+        RecordStats(EndReason.Success);
         Debug.Log(
             $"Episode end: {EndReason.Success} " +
             $"(dist={dist:F2}, pos={transform.position})"
@@ -486,10 +508,10 @@ public override void OnActionReceived(ActionBuffers actions)
     }
 
     // No improvement -> explicitly penalize "hover forever"
-    if (noImproveTimer > 20f)
+    if (noImproveTimer > 10f)
     {
-        AddReward(-5.0f);
-        RecordStats();
+        AddReward(-3.0f);
+        RecordStats(EndReason.NoImprove);
         Debug.Log(
             $"Episode end: {EndReason.NoImprove} " +
             $"(bestDist={bestDist:F2}, curDist={dist:F2}, pos={transform.position})"
@@ -501,8 +523,8 @@ public override void OnActionReceived(ActionBuffers actions)
     // Excessive tilt
     if (tilt > maxTiltDeg)
     {
-        AddReward(-0.5f);
-        RecordStats();
+        AddReward(-25f);
+        RecordStats(EndReason.Tilt);
         Debug.Log($"Episode end: {EndReason.Tilt}");
         EndEpisode();
         return;
@@ -511,7 +533,7 @@ public override void OnActionReceived(ActionBuffers actions)
     // Timeout
     if (timer > maxEpisodeTime)
     {
-        RecordStats();
+        RecordStats(EndReason.Timeout);
         Debug.Log(
             $"Episode end: {EndReason.Timeout} " +
             $"(t={timer:F1}s, dist={dist:F2}, pos={transform.position})"
@@ -520,34 +542,40 @@ public override void OnActionReceived(ActionBuffers actions)
         return;
     }
 }
-    public void RegisterCrash(float impactSpeed = 0f)
-    {
-        collisionQueued = true;
-        queuedCollisionSpeed = Mathf.Max(queuedCollisionSpeed, impactSpeed);
-        collisionsThisEpisode++;
-    }
 
-    public void RegisterSuccess()
-    {
-        successThisEpisode = true;
-        AddReward(+50.0f);
-        RecordStats();
-        Debug.Log($"Episode end: {EndReason.Success} (RegisterSuccess, pos={transform.position})");
-        EndEpisode();
-    }
+public void RegisterCrash(float impactSpeed = 0f)
+{
+    // Mark that a collision happened this episode and track the worst impact speed
+    collisionQueued = true;
+    queuedCollisionSpeed = Mathf.Max(queuedCollisionSpeed, impactSpeed);
+    collisionsThisEpisode++;
+}
 
-    private void RecordStats()
-    {
-        stats.Add("Episode/Collisions", collisionsThisEpisode);
-        stats.Add("Episode/Success", successThisEpisode ? 1 : 0);
-        stats.Add("Episode/TotalReward", GetCumulativeReward());
-    }
+public void RegisterSuccess()
+{
+    successThisEpisode = true;
+    AddReward(+100.0f);
+    RecordStats(EndReason.Success);
+    Debug.Log($"Episode end: {EndReason.Success} (RegisterSuccess, pos={transform.position})");
+    EndEpisode();
+}
 
-    void OnDrawGizmosSelected()
-    {
-        if (porchWaypoints == null) return;
-        Gizmos.color = Color.yellow;
-        foreach (var wp in porchWaypoints)
-            if (wp != null) Gizmos.DrawSphere(wp.position, 0.3f);
-    }
+private void RecordStats(EndReason reason)
+{
+    // Episode stats
+    stats.Add("Episode/TotalReward", GetCumulativeReward());
+
+    // Explicit logs for each end reason (so they’re not all mashed into 0)
+    stats.Add("Episode/Ended/Success",   reason == EndReason.Success   ? 1 : 0);
+    stats.Add("Episode/Ended/HardCrash", reason == EndReason.HardCrash ? 1 : 0);
+    stats.Add("Episode/Ended/Timeout",   reason == EndReason.Timeout   ? 1 : 0);
+    stats.Add("Episode/Ended/NoImprove", reason == EndReason.NoImprove ? 1 : 0);
+    stats.Add("Episode/Ended/Stuck",     reason == EndReason.Stuck     ? 1 : 0);
+    stats.Add("Episode/Ended/Tilt",      reason == EndReason.Tilt      ? 1 : 0);
+
+    // Convenience: outcome = 1 only for success, (this was the legacy metric)
+    int outcome = (reason == EndReason.Success) ? 1 : 0;
+    stats.Add("Episode/Outcome", outcome);
+}
+
 }
